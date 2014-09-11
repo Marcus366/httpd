@@ -1,12 +1,16 @@
-CC = gcc
-FLAG = -Wall -g
+CC =gcc
+FLAG =-Wall -std=c99 -g
+OBJS =httpd.o libhttp.o server.o connection.o request.o
 
 .PHONY: all
 
-all: ehttpd main
+all: httpd main
 
-ehttpd: ehttpd.c
-	$(CC) $(FLAG) $< -o $@	
+%.o:%.c
+	$(CC) $(FLAG) -c $< -o $@
+
+httpd: $(OBJS)
+	$(CC) $(FLAG) $(OBJS) -o $@
 
 main: main.c
 	$(CC) $(FLAG) $< -o $@
