@@ -6,6 +6,6 @@ int main(int argc, char** argv)
 {
     struct server* svc = new_http_server(80);
     serve(svc);
-
+    //never return
     exit(-1);
 }

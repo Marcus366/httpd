@@ -4,7 +4,7 @@
 #include <unistd.h>
 
 enum req_state {
-    REQ_INVAL = 0,
+    REQ_INVAL,
     REQ_PARSE_BEGIN,
     REQ_CL,
     REQ_CLRF,
@@ -18,6 +18,5 @@ struct request {
     size_t buf_size, read_idx, check_idx;
     
 };
-
 
 #endif

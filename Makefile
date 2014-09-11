@@ -1,6 +1,6 @@
 CC =gcc
 FLAG =-Wall -std=c99 -g
-OBJS =httpd.o libhttp.o server.o connection.o request.o
+OBJS =httpd.o libhttp.o server.o connect.o request.o
 
 .PHONY: all
 
@@ -14,4 +14,3 @@ httpd: $(OBJS)
 
 main: main.c
 	$(CC) $(FLAG) $< -o $@
-

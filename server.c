@@ -1,14 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <sys/epoll.h>
 
 #include "server.h"
+#include "connect.h"
 
 struct server* new_http_server(int port)
 {
@@ -63,10 +60,6 @@ void serve(struct server* svc)
     }
 
     for (;;) {
-        struct sockaddr_in conn_addr;
-        int connfd;
-        socklen_t conn_len;
-        memset(&conn_addr, 0, sizeof(conn_addr));
         nfds = epoll_wait(svc->epollfd, events, 10, -1);
         if (nfds == -1) {
             perror("epoll_wait");
@@ -74,29 +67,10 @@ void serve(struct server* svc)
         }
         for (int i = 0; i < nfds; ++i) {
             if (events[i].data.fd == svc->listenfd) {
-                if ((connfd = accept(svc->listenfd, (struct sockaddr*)&conn_addr, &conn_len)) == -1) {
-                    perror("accept");
-                    break;
-                }
-                printf("accept address: %s\n", inet_ntoa(conn_addr.sin_addr));
-                struct epoll_event rwev;
-                rwev.events = EPOLLIN | EPOLLET;
-                rwev.data.fd = connfd;
-                if (epoll_ctl(svc->epollfd, EPOLL_CTL_ADD, connfd, &rwev) == -1) {
-                    perror("epoll_ctl");
-                    close(connfd);
-                    continue;
-                }
+                handle_new_connect(svc);
             } else {
-                connfd = events[i].data.fd;
-                char buf[1024];
-                ssize_t nread;
-                if ((nread = read(connfd, buf, 1024)) > 0) {
-                    write(0, buf, nread);
-                }
-                strcpy(buf, "HTTP/1.1 200 OK\r\nServer: Nginx\r\nDate: Sat, 31 Dec 2014 23:59:59 GMT\r\nContent-Type: text/html\r\nContent-Length: 122\r\n\r\n<html>\r\n<head>\r\n<title>Wrox Homepage</title>\r\n</head>\r\n<body>\r\n</bod>\r\n</html>\r\n");
-                write(connfd, buf, strlen(buf));
-                close(connfd);
+                struct connect *conn = events[i].data.ptr;
+                handle_transfer(conn);
             }
         }
     }
