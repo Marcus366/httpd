@@ -3,8 +3,6 @@
 
 #include <unistd.h>
 
-#include "http_conn.h"
-
 enum req_state {
     REQ_INVAL,
 
