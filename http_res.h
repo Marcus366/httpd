@@ -44,6 +44,7 @@ struct http_res {
 
 
 struct http_res* new_http_res(size_t bufsize);
+void             free_http_res(struct http_res *res);
 
 int http_gen_res(struct http_res *res, struct http_req* req);
 enum send_state http_send_res(struct http_res *res, int sockfd);

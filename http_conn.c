@@ -24,6 +24,17 @@ struct http_conn* new_http_conn(struct http_srv* srv, int sockfd)
     return conn;
 }
 
+void free_http_conn(struct http_conn* conn)
+{
+    if (conn->req) {
+        free_http_req(conn->req);
+    }
+    if (conn->res) {
+        free_http_res(conn->res);
+    }
+    free(conn);
+}
+
 int handle_new_connect(struct http_srv* srv)
 {
     int connfd;
@@ -61,6 +72,13 @@ int handle_new_connect(struct http_srv* srv)
     return 0;
 }
 
+int http_close_conn(struct http_conn* conn)
+{
+    int ret = close(conn->sockfd);
+    free_http_conn(conn);
+    return ret;
+}
+
 int handle_read(struct http_conn* conn)
 {
     if (conn->req == NULL) {
@@ -74,7 +92,7 @@ int handle_read(struct http_conn* conn)
         ev.data.ptr = conn;
         if (epoll_ctl(conn->srv->epollfd, EPOLL_CTL_MOD, conn->sockfd, &ev) == -1) {
             perror("epoll mod");
-            close(conn->sockfd);
+            http_close_conn(conn);
             return -1;
         }
         conn->state = CONN_WRITE; 
@@ -90,10 +108,8 @@ int handle_write(struct http_conn* conn)
         http_gen_res(conn->res, conn->req);
     }
 
-    static int k = 0;
-    printf("handle write %d\n", k++);
     if (http_send_res(conn->res, conn->sockfd) == SEND_FINISH) {
-        close(conn->sockfd);
+        http_close_conn(conn);
     }
     return 0;
 }

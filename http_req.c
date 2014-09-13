@@ -17,6 +17,14 @@ struct http_req* new_http_req(size_t bufsize)
     return req;
 }
 
+void free_http_req(struct http_req *req)
+{
+    if (req != NULL) {
+        free(req->read_buf);
+        free(req);
+    }
+}
+
 ssize_t http_read_req(struct http_req *req, int sockfd)
 {
     ssize_t cnt = 0;

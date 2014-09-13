@@ -4,7 +4,7 @@ OBJS =httpd.o libhttp.o http_srv.o http_conn.o http_req.o http_res.o
 
 .PHONY: all
 
-all: httpd run
+all: httpd run clean
 
 %.o:%.c %.h
 	$(CC) $(FLAG) -c $< -o $@
@@ -14,3 +14,7 @@ httpd: $(OBJS)
 
 run: httpd
 	sudo ./httpd
+
+clean:
+	rm *.o
+	rm httpd

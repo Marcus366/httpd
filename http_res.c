@@ -31,6 +31,14 @@ struct http_res* new_http_res(size_t bufsize)
     return res;
 }
 
+void free_http_res(struct http_res *res)
+{
+    if (res != NULL) {
+        free(res->send_buf);
+        free(res);
+    }
+}
+
 int http_gen_res(struct http_res *res, struct http_req *req)
 {
     char *buf = res->send_buf;
@@ -66,7 +74,7 @@ enum send_state http_send_res(struct http_res *res, int sockfd)
             }
         }
         res->send_idx += nwrite;
-        if (nwrite == 0) {
+        if (nwrite == 0 || nwrite == free) {
             return SEND_FINISH;
         } else if (nwrite < free) {
             return SEND_BLOCK;
