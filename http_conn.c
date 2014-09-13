@@ -86,7 +86,7 @@ int handle_read(struct http_conn* conn)
     }
     http_read_req(conn->req, conn->sockfd);
     if (http_parse_req(conn->req)) {
-        printf("%s line%d parse req---method:%s uri:%s version:%s\n", __FILE__, __LINE__, conn->req->method, conn->req->uri, conn->req->version);
+        printf("parse request: method:%s uri:%s version:%s\n", conn->req->method, conn->req->uri, conn->req->version);
         struct epoll_event ev;
         ev.events = EPOLLOUT | EPOLLET;
         ev.data.ptr = conn;
