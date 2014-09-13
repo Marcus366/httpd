@@ -1,16 +1,16 @@
 CC =gcc
 FLAG =-Wall -std=c99 -g
-OBJS =httpd.o libhttp.o server.o connect.o request.o
+OBJS =httpd.o libhttp.o http_srv.o http_conn.o http_req.o
 
 .PHONY: all
 
-all: httpd main
+all: httpd run
 
-%.o:%.c
+%.o:%.c %.h
 	$(CC) $(FLAG) -c $< -o $@
 
 httpd: $(OBJS)
 	$(CC) $(FLAG) $(OBJS) -o $@
 
-main: main.c
-	$(CC) $(FLAG) $< -o $@
+run: httpd
+	sudo ./httpd
