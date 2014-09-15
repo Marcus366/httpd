@@ -18,14 +18,14 @@ static inline int copy_and_mv(char **out, char* in)
     return 1;
 }
 
-struct http_res* new_http_res(size_t bufsize)
+struct http_res* new_http_res()
 {
     struct http_res *res = (struct http_res*)malloc(sizeof(struct http_res));
     if (res != NULL) {
         res->state    = REQ_GEN_BEGIN;
-        res->send_buf = (char*)malloc(bufsize);
-        res->buf_size = bufsize;
-        res->buf_len = 0;
+        res->send_buf = NULL;
+        res->buf_size = 0;
+        res->buf_len  = 0;
         res->send_idx = 0;
     }
     return res;
@@ -41,17 +41,35 @@ void free_http_res(struct http_res *res)
 
 int http_gen_res(struct http_res *res, struct http_req *req)
 {
-    char *buf = res->send_buf;
-    /*int fd = open(req->uri + 1, O_RDONLY);
+    int fd = open(req->uri + 1, O_RDONLY);
     if (fd == -1) {
         perror("open failed");
         return 0;
-    }*/
+    }
+
+    struct stat st;
+    if (fstat(fd, &st) == -1) {
+        perror("fstat");
+        return 0;
+    }
+
+    res->send_buf = (char*)malloc((int)st.st_size + 1024);
+    res->buf_size = (int)st.st_size + 1024;
+    char *buf = res->send_buf;
     copy_and_mv(&buf, req->version);
     copy_and_mv(&buf, " ");
     copy_and_mv(&buf, HTTP_OK);
     copy_and_mv(&buf, "\r\n");
-    copy_and_mv(&buf, "Server: Nginx\r\nDate: Sat, 31 Dec 2014 23:59:59 GMT\r\nContent-Type: text/html\r\nContent-Length: 122\r\n\r\n<html>\r\n<head>\r\n<title>Wrox Homepage</title>\r\n</head>\r\n<body>\r\n</bod>\r\n</html>\r\n");
+    copy_and_mv(&buf, "Server: Nginx\r\nDate: Sat, 31 Dec 2014 23:59:59 GMT\r\nContent-Type: text/html\r\n");
+    char contentlen[64];
+    sprintf(contentlen, "Content-Length: %d\r\n", (int)st.st_size);
+    copy_and_mv(&buf, contentlen);
+    char readbuf[1024];
+    ssize_t nread;
+    while ((nread = read(fd, readbuf, 1024)) > 0) {
+       readbuf[nread] = 0;
+       copy_and_mv(&buf, readbuf);
+    }
 
     res->buf_len = strlen(res->send_buf);
     return 0;

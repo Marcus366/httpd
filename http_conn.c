@@ -82,7 +82,7 @@ int http_close_conn(struct http_conn* conn)
 int handle_read(struct http_conn* conn)
 {
     if (conn->req == NULL) {
-        conn->req = new_http_req(1024);
+        conn->req = new_http_req(10);
     }
     http_read_req(conn->req, conn->sockfd);
     if (http_parse_req(conn->req)) {
@@ -104,7 +104,7 @@ int handle_read(struct http_conn* conn)
 int handle_write(struct http_conn* conn)
 {
     if (conn->res == NULL) {
-        conn->res = new_http_res(1024);
+        conn->res = new_http_res();
         http_gen_res(conn->res, conn->req);
     }
 

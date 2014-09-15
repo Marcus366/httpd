@@ -48,8 +48,8 @@ ssize_t http_read_req(struct http_req *req, int sockfd)
             break;
         }
         if (req->read_idx == req->buf_size) {
-            //TODO
-            //realloc the req bufsize
+            req->buf_size = req->buf_size << 1;;
+            req->read_buf = (char*)realloc(req->read_buf, req->buf_size);
         }
     }
     return cnt;

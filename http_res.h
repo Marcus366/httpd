@@ -19,7 +19,6 @@
 #define HTTP_SERVICE_UNAVAILABLE     "503"
 
 enum res_state {
-
     REQ_GEN_BEGIN,
     REQ_GEN_END,
     REQ_SENDING,
@@ -33,17 +32,14 @@ enum send_state {
 };
 
 struct http_res {
-    enum res_state state;
- 
-    char *send_buf;
-    size_t buf_size;
-    size_t buf_len;
-    size_t send_idx;
-
+    enum res_state  state;
+    char           *send_buf;
+    size_t          buf_size;
+    size_t          buf_len;
+    size_t          send_idx;
 };
 
-
-struct http_res* new_http_res(size_t bufsize);
+struct http_res* new_http_res();
 void             free_http_res(struct http_res *res);
 
 int http_gen_res(struct http_res *res, struct http_req* req);
