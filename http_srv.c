@@ -6,11 +6,14 @@
 
 #include "http_srv.h"
 #include "http_conn.h"
+#include "http_timer.h"
 
 struct http_srv* new_http_srv(int port)
 {
     int listenfd, epollfd;
     struct sockaddr_in addr;
+
+    http_timer_init();
 
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
     if (listenfd == -1) {
@@ -60,6 +63,8 @@ void serve(struct http_srv* svc)
     }
 
     for (;;) {
+        http_timer_run();
+
         nfds = epoll_wait(svc->epollfd, events, 10, -1);
         if (nfds == -1) {
             perror("epoll_wait");
