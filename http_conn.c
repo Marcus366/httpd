@@ -82,9 +82,9 @@ int http_close_conn(struct http_conn* conn)
 int handle_read(struct http_conn* conn)
 {
     if (conn->req == NULL) {
-        conn->req = new_http_req(10);
+        conn->req = new_http_req(1024);
     }
-    http_read_req(conn->req, conn->sockfd);
+    http_recv_req(conn->req, conn->sockfd);
     if (http_parse_req(conn->req)) {
         printf("parse request: method:%s uri:%s version:%s\n", conn->req->method, conn->req->uri, conn->req->version);
         struct epoll_event ev;

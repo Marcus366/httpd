@@ -38,7 +38,7 @@ struct http_req {
 struct http_req* new_http_req(size_t bufsize);
 void             free_http_req(struct http_req *req);
 
-ssize_t http_read_req(struct http_req *req, int sockfd);
+ssize_t http_recv_req(struct http_req *req, int sockfd);
 int     http_parse_req(struct http_req *req);
 
 #endif
