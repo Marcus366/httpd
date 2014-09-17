@@ -10,6 +10,7 @@
 #include "http_conn.h"
 #include "http_req.h"
 #include "http_res.h"
+#include "http_timer.h"
 
 struct http_conn* new_http_conn(struct http_srv* srv, int sockfd)
 {
@@ -72,6 +73,13 @@ int handle_new_connect(struct http_srv* srv)
     return 0;
 }
 
+static void* http_close_cb(void* arg)
+{
+    struct http_conn *conn = (struct http_conn*)arg;
+    printf("http_close_cb\n");
+    return (void*)http_close_conn(conn);
+}
+
 int http_close_conn(struct http_conn* conn)
 {
     int ret = close(conn->sockfd);
@@ -109,7 +117,7 @@ int handle_write(struct http_conn* conn)
     }
 
     if (http_send_res(conn->res, conn->sockfd) == SEND_FINISH) {
-        http_close_conn(conn);
+        http_timer_create(1.0, http_close_cb, conn, TIMER_ONCE);
     }
     return 0;
 }
