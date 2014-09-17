@@ -6,7 +6,8 @@ static struct http_timer *timer_head;
 
 int http_timer_init() {
     timer_head = (struct http_timer*)malloc(sizeof(struct http_timer));
-    timer_head->lprev = timer_head->lnext = NULL;
+    timer_head->lprev = timer_head->lnext = timer_head;
+    return 0;
 }
 
 struct http_timer* http_timer_create(double interval, http_timer_cb cb, void *arg, enum timer_type type)
@@ -18,7 +19,7 @@ struct http_timer* http_timer_create(double interval, http_timer_cb cb, void *ar
 
     gettimeofday(&timer->trigger, NULL);
     timer->trigger.tv_sec += (long)interval;
-    timer->trigger.tv_usec += (interval - timer->trigger.tv_sec) * 1e6;
+    timer->trigger.tv_usec += (interval - (long)interval) * 1e6;
     if (timer->trigger.tv_usec > 1e6) {
         timer->trigger.tv_usec -= 1e6;
         timer->trigger.tv_sec += 1;
@@ -40,7 +41,9 @@ void http_timer_run()
 
     struct http_timer *timer = timer_head->lnext;
     while (timer != timer_head) {
-        if (timercmp(&timer->trigger, &now, >=)) {
+        if (timer->trigger.tv_sec < now.tv_sec
+        || (timer->trigger.tv_sec == now.tv_sec && timer->trigger.tv_usec <= now.tv_usec))
+        {
             timer->cb(timer->arg);
             if (timer->type == TIMER_ONCE) {
                 struct http_timer *prev = timer->lprev;
@@ -48,10 +51,9 @@ void http_timer_run()
                 prev->lnext = next;
                 next->lprev = prev;
                 free(timer);
-                timer = next;
             } else if (timer->type == TIMER_CYCLE) {
-                timer = timer->lnext;
             }
         }
+        timer = timer->lnext;
     }
 }
