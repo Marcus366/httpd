@@ -48,7 +48,7 @@ struct http_srv* new_http_srv(int port)
 void serve(struct http_srv* svc)
 {
     int nfds;
-    struct epoll_event ev, events[10];
+    struct epoll_event ev, events[1024];
 
     if (listen(svc->listenfd, 1024) != 0) {
         perror("listen");
@@ -65,7 +65,7 @@ void serve(struct http_srv* svc)
     for (;;) {
         http_timer_run();
 
-        nfds = epoll_wait(svc->epollfd, events, 10, -1);
+        nfds = epoll_wait(svc->epollfd, events, 1024, 500);
         if (nfds == -1) {
             perror("epoll_wait");
             exit(EXIT_FAILURE);
