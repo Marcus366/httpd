@@ -76,6 +76,7 @@ int handle_new_connect(struct http_srv* srv)
 static void* http_close_cb(void* arg)
 {
     struct http_conn *conn = (struct http_conn*)arg;
+    SET_CONN_STATE(conn, CONN_WAIT_CLOSE);
     printf("http_close_cb\n");
     return (void*)http_close_conn(conn);
 }
@@ -92,7 +93,9 @@ int handle_read(struct http_conn* conn)
     if (conn->req == NULL) {
         conn->req = new_http_req(1024);
     }
+
     http_recv_req(conn->req, conn->sockfd);
+
     if (http_parse_req(conn->req)) {
         printf("parse request: method:%s uri:%s version:%s\n", conn->req->method, conn->req->uri, conn->req->version);
         struct epoll_event ev;

@@ -4,7 +4,8 @@
 enum conn_state {
     CONN_IDLE,
     CONN_READ,
-    CONN_WRITE
+    CONN_WRITE,
+    CONN_WAIT_CLOSE
 };
 
 struct http_conn {
@@ -15,6 +16,8 @@ struct http_conn {
     struct http_req *req;
     struct http_res *res;
 };
+
+#define SET_CONN_STATE(conn, newstate) do { conn->state = newstate; } while (0);
 
 struct http_conn* new_http_conn(struct http_srv* srv, int sockfd);
 void              free_http_conn(struct http_conn* conn);
