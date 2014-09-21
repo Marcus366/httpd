@@ -66,8 +66,7 @@ int handle_new_connect(struct http_srv* srv)
     ev.data.ptr = new_http_conn(srv, connfd);
     if (epoll_ctl(srv->epollfd, EPOLL_CTL_ADD, connfd, &ev) == -1) {
         perror("epoll_ctl");
-        free(ev.data.ptr);
-        close(connfd);
+        http_close_conn(ev.data.ptr);
         return -1;
     }
     return 0;
