@@ -3,6 +3,12 @@
 
 #include <unistd.h>
 
+#define CR '\r'
+#define LF '\n'
+
+#define METHOD_GET  1
+#define METHOD_POST 2
+
 enum req_state {
     REQ_INVAL,
 
@@ -15,11 +21,11 @@ enum req_state {
     REQ_PARSE_VERSION_BEGIN,
     REQ_PARSING_VERSION,
 
-    REQ_PARSE_,
+    REQ_PARSE_REQLINE_END,
 
-    REQ_CL,
-    REQ_CLRF,
-    REQ_CLRFCL,
+    REQ_CR,
+    REQ_CRLF,
+    REQ_CRLFCR,
     REQ_PARSE_END
 };
 

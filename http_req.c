@@ -88,20 +88,20 @@ int http_parse_req(struct http_req *req)
             case REQ_PARSING_VERSION:
                 if (*c == '\r') {
                     *c = 0;
-                    req->state = REQ_CL;
+                    req->state = REQ_CR;
                 }
                 break;
-            case REQ_CL:
+            case REQ_CR:
                 if (*c == '\n') {
-                    req->state = REQ_CLRF;
+                    req->state = REQ_CRLF;
                 }
                 break;
-            case REQ_CLRF:
+            case REQ_CRLF:
                 if (*c == '\r') {
-                    req->state = REQ_CLRFCL;
+                    req->state = REQ_CRLFCR;
                 }
                 break;
-            case REQ_CLRFCL:
+            case REQ_CRLFCR:
                 if (*c == '\n') {
                     req->state = REQ_PARSE_END;
                 }
