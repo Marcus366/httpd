@@ -42,7 +42,18 @@ struct http_res {
 struct http_res* new_http_res();
 void             free_http_res(struct http_res *res);
 
+/*
+ * Generate Response.
+ * It is called after parse the request, and generate the response
+ * string in the buffer.
+ */
 int http_gen_res(struct http_res *res, struct http_req* req);
+
+/*
+ * Send the response to sockfd.
+ * It will be blocked if the TCP send buffer is full,
+ * so it return the send state for more operation.
+ */
 enum send_state http_send_res(struct http_res *res, int sockfd);
 
 #endif
