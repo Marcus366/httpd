@@ -72,12 +72,11 @@ int handle_new_connect(struct http_srv* srv)
     return 0;
 }
 
-static void* http_close_cb(void* arg)
+void http_close_cb(void* arg)
 {
     struct http_conn *conn = (struct http_conn*)arg;
     SET_CONN_STATE(conn, CONN_WAIT_CLOSE);
     printf("http_close_cb\n");
-    return (void*)http_close_conn(conn);
 }
 
 int http_close_conn(struct http_conn* conn)

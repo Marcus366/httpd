@@ -8,7 +8,7 @@ enum timer_type {
     TIMER_CYCLE
 };
 
-typedef void* (*http_timer_cb)(void *arg);
+typedef void (*http_timer_cb)(void *arg);
 
 struct http_timer {
     http_timer_cb        cb;
