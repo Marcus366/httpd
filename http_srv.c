@@ -63,9 +63,13 @@ void serve(struct http_srv* svc)
     }
 
     for (;;) {
-        http_timer_run();
+        struct timeval now;
+        gettimeofday(&now, NULL);
+        http_timer_run(svc->now, now);
+        *svc->now = now;
 
-        nfds = epoll_wait(svc->epollfd, events, 1024, 500);
+        int timeout = http_timer_minimal_timeout();
+        nfds = epoll_wait(svc->epollfd, events, 1024, timeout);
         if (nfds == -1) {
             perror("epoll_wait");
             exit(EXIT_FAILURE);

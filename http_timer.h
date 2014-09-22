@@ -14,7 +14,8 @@ struct http_timer {
     http_timer_cb        cb;
     void                *arg;
     enum timer_type      type;
-    struct timeval       trigger;
+    long                 interval;
+    long                 timeout;
     //struct http_timer   *hprev;
     //struct http_timer   *hnext;
     struct http_timer   *lprev;
@@ -24,8 +25,11 @@ struct http_timer {
 int http_timer_init();
 void http_timer_run();
 
-struct http_timer*  http_timer_create(double interval, http_timer_cb cb, void *arg, enum timer_type type);
+struct http_timer*  http_timer_create(int msec, http_timer_cb cb, void *arg, enum timer_type type);
 //TODO
 //int http_timer_cancel(struct http_timer *timer);
+
+int http_timer_minimal_timeout();
+
 
 #endif

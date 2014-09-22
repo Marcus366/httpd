@@ -119,7 +119,7 @@ int handle_write(struct http_conn* conn)
     }
 
     if (http_send_res(conn->res, conn->sockfd) == SEND_FINISH) {
-        http_timer_create(1.0, http_close_cb, conn, TIMER_ONCE);
+        http_timer_create(1000, http_close_cb, conn, TIMER_ONCE);
     }
     return 0;
 }

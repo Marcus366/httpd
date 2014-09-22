@@ -1,9 +1,13 @@
-#ifndef __SERVER_H__
-#define __SERVER_H__
+#ifndef __HTTP_SERVER_H__
+#define __HTTP_SERVER_H__
+
+#include <time.h>
 
 struct http_srv {
     int listenfd;
     int epollfd;
+
+    struct timeval *now;
 };
 
 /*
