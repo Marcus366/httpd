@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <netinet/in.h>
 #include <sys/epoll.h>
 
@@ -12,8 +13,6 @@ struct http_srv* new_http_srv(int port)
 {
     int listenfd, epollfd;
     struct sockaddr_in addr;
-
-    http_timer_init();
 
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
     if (listenfd == -1) {
@@ -42,6 +41,8 @@ struct http_srv* new_http_srv(int port)
     struct http_srv* svc = (struct http_srv*)malloc(sizeof(struct http_srv));
     svc->listenfd = listenfd;
     svc->epollfd = epollfd;
+    gettimeofday(&svc->now, NULL);
+    http_timer_init();
     return svc;
 }
 
@@ -62,12 +63,31 @@ void serve(struct http_srv* svc)
         return;
     }
 
+    /*
+    if (daemon(1, 1) == -1) {
+        perror("deamon");
+        return;
+    }
+    */
+
     for (;;) {
+        printf("a more for loop\n");
+
         struct timeval now;
         gettimeofday(&now, NULL);
         http_timer_run(svc->now, now);
-        *svc->now = now;
+        svc->now = now;
 
+        /* FIXME Issue #1
+         * If this function return 0,
+         * it is strange to find that it trigger many time main loop.
+         * Expected: It return 0 so that epoll_wait return without blocking.
+         *           In such condition nfds may be 0 too and the control flow
+         *           will go to next main loop. Then it call http_timer_run which
+         *           trigger all timer and remove it.
+         * Actually: It seem that http_timer_run have NOT trigger the timer so
+         *           run mainloop many times.
+         */
         int timeout = http_timer_minimal_timeout();
         nfds = epoll_wait(svc->epollfd, events, 1024, timeout);
         if (nfds == -1) {

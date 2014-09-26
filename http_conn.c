@@ -75,8 +75,8 @@ int handle_new_connect(struct http_srv* srv)
 void http_close_cb(void* arg)
 {
     struct http_conn *conn = (struct http_conn*)arg;
-    SET_CONN_STATE(conn, CONN_WAIT_CLOSE);
     printf("http_close_cb\n");
+    close(conn->sockfd);
 }
 
 int http_close_conn(struct http_conn* conn)
@@ -118,7 +118,9 @@ int handle_write(struct http_conn* conn)
     }
 
     if (http_send_res(conn->res, conn->sockfd) == SEND_FINISH) {
-        http_timer_create(1000, http_close_cb, conn, TIMER_ONCE);
+        printf("SEND_FINISH\n");
+        SET_CONN_STATE(conn, CONN_WAIT_CLOSE);
+        http_timer_create(1e6, http_close_cb, conn, TIMER_ONCE);
     }
     return 0;
 }
