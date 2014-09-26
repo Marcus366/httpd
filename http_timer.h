@@ -1,5 +1,5 @@
-#ifndef _HTTP_TIMER_H__
-#define _HTTP_TIMER_H__
+#ifndef __HTTP_TIMER_H__
+#define __HTTP_TIMER_H__
 
 #include <sys/time.h>
 
@@ -23,13 +23,23 @@ struct http_timer {
 };
 
 int http_timer_init();
-void http_timer_run();
+void http_timer_run(struct timeval last, struct timeval now);
 
-struct http_timer*  http_timer_create(int msec, http_timer_cb cb, void *arg, enum timer_type type);
-//TODO
-//int http_timer_cancel(struct http_timer *timer);
+/* Create a new timer and add it to scheduler */
+struct http_timer* http_timer_create(int usec, http_timer_cb cb, void *arg, enum timer_type type);
+
+/*
+ * Remove a current timer for scheduler list.
+ * Return next timer of current timer.
+ */
+struct http_timer* http_timer_cancel(struct http_timer *timer);
 
 int http_timer_minimal_timeout();
 
+static void
+http_timer_trigger(struct http_timer *timer)
+{
+   timer->cb(timer->arg);
+}
 
 #endif
