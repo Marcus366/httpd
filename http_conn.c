@@ -120,7 +120,7 @@ int handle_write(struct http_conn* conn)
     }
 
     if (http_send_res(conn->res, conn->sockfd) == SEND_FINISH) {
-        LOG_VERBOSE("SEND_FINISH\n");
+        LOG_VERBOSE("SEND_FINISH");
         SET_CONN_STATE(conn, CONN_WAIT_CLOSE);
         http_timer_create(1e6, http_close_cb, conn, TIMER_ONCE);
     }

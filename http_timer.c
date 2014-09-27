@@ -29,7 +29,7 @@ int http_timer_minimal_timeout()
         }
         timer = timer->lnext;
     }
-    LOG_VERBOSE("minimal timeout:%ld\n", (long)(min * 1e-3));
+    LOG_VERBOSE("minimal timeout:%ld", (long)(min * 1e-3));
 
     return min * 1e-3;
 }
@@ -82,7 +82,7 @@ void http_timer_run(struct timeval last, struct timeval now)
                 timer->timeout = timer->interval;
                 timer = timer->lnext;
             } else {
-                LOG_WARN("invalid type of timer\n");
+                LOG_WARN("invalid type of timer");
             }
         } else {
             timer = timer->lnext;
