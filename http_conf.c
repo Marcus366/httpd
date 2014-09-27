@@ -37,4 +37,6 @@ http_read_conf(struct http_conf *conf, char *filename)
             LOG_WARN("invalid loglevel flag[%s] of config file[%s]", flag, filename);
         }
     }
+
+    fclose(file);
 }
