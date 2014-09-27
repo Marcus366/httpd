@@ -45,13 +45,13 @@ int http_gen_res(struct http_res *res, struct http_req *req)
     int fd = open(req->uri + 1, O_RDONLY);
     if (fd == -1) {
         perror("open failed");
-        return 0;
+        return -1;
     }
 
     struct stat st;
     if (fstat(fd, &st) == -1) {
         perror("fstat");
-        return 0;
+        return -1;
     }
 
     res->send_buf = (char*)malloc((int)st.st_size + 1024);
@@ -71,6 +71,7 @@ int http_gen_res(struct http_res *res, struct http_req *req)
        readbuf[nread] = 0;
        copy_and_mv(&buf, readbuf);
     }
+    close(fd);
 
     res->buf_len = strlen(res->send_buf);
     return 0;

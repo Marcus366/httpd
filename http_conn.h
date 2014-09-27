@@ -2,10 +2,10 @@
 #define __HTTP_CONN_H__
 
 enum conn_state {
-    CONN_IDLE,
-    CONN_READ,
-    CONN_WRITE,
-    CONN_WAIT_CLOSE
+    CONN_IDLE       = 0,
+    CONN_READ       = 1,
+    CONN_WRITE      = 2,
+    CONN_WAIT_CLOSE = 3,
 };
 
 struct http_conn {

@@ -116,7 +116,10 @@ int handle_write(struct http_conn* conn)
 {
     if (conn->res == NULL) {
         conn->res = new_http_res();
-        http_gen_res(conn->res, conn->req);
+        if (http_gen_res(conn->res, conn->req) == -1) {
+            http_close_conn(conn);
+            return -1;
+        }
     }
 
     if (http_send_res(conn->res, conn->sockfd) == SEND_FINISH) {
