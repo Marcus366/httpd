@@ -111,7 +111,7 @@ void serve(struct http_srv* svc)
                 } else if (conn->state == CONN_WRITE) {
                     handle_write(conn);
                 } else {
-                    LOG_WARN("Invalid connect state:%d", (int)conn->state);
+                    LOG_WARN("Invalid connect state:%d of uuid:%llu", (int)conn->state, conn->uuid);
                     http_close_conn(conn);
                 }
             } 

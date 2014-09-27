@@ -8,9 +8,12 @@ enum conn_state {
     CONN_WAIT_CLOSE = 3,
 };
 
+typedef unsigned long long ull;
+
 struct http_conn {
     struct http_srv *srv;
 
+    ull              uuid;
     int              sockfd;
     enum conn_state  state;
     struct http_req *req;

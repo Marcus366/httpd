@@ -13,10 +13,13 @@
 #include "http_timer.h"
 #include "http_log.h"
 
+ull conn_count = 0;
+
 struct http_conn* new_http_conn(struct http_srv* srv, int sockfd)
 {
     struct http_conn* conn = (struct http_conn*)malloc(sizeof(struct http_conn));
     if (conn != NULL) {
+        conn->uuid   = conn_count++;
         conn->srv    = srv;
         conn->sockfd = sockfd;
         conn->state  = CONN_READ;
@@ -60,16 +63,16 @@ int handle_new_connect(struct http_srv* srv)
         return -1;
     }
 
-    LOG_INFO("accept address %s", inet_ntoa(conn_addr.sin_addr));
-    
+    struct http_conn *conn = new_http_conn(srv, connfd);
     struct epoll_event ev;
     ev.events = EPOLLIN | EPOLLET;
-    ev.data.ptr = new_http_conn(srv, connfd);
+    ev.data.ptr = conn;
     if (epoll_ctl(srv->epollfd, EPOLL_CTL_ADD, connfd, &ev) == -1) {
         perror("epoll_ctl");
         http_close_conn(ev.data.ptr);
         return -1;
     }
+    LOG_INFO("accept address %s, sockfd:%d, uuid:%llu", inet_ntoa(conn_addr.sin_addr), conn->sockfd, conn->uuid);
     return 0;
 }
 
@@ -78,6 +81,7 @@ void http_close_cb(void* arg)
     struct http_conn *conn = (struct http_conn*)arg;
     LOG_DEBUG("http_close_cb");
     close(conn->sockfd);
+    free_http_conn(conn);
 }
 
 int http_close_conn(struct http_conn* conn)
