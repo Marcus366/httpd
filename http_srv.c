@@ -2,12 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <netinet/in.h>
 #include <sys/epoll.h>
 
 #include "http_srv.h"
 #include "http_conn.h"
 #include "http_timer.h"
+#include "http_log.h"
 
 struct http_srv* new_http_srv(int port)
 {
@@ -32,7 +34,7 @@ struct http_srv* new_http_srv(int port)
         return NULL;
     }
 
-    epollfd = epoll_create(10);
+    epollfd = epoll_create(1024);
     if (epollfd == -1) {
         perror("epoll_create");
         exit(EXIT_FAILURE);
@@ -41,8 +43,10 @@ struct http_srv* new_http_srv(int port)
     struct http_srv* svc = (struct http_srv*)malloc(sizeof(struct http_srv));
     svc->listenfd = listenfd;
     svc->epollfd = epollfd;
+
     gettimeofday(&svc->now, NULL);
     http_timer_init();
+
     return svc;
 }
 
@@ -71,7 +75,7 @@ void serve(struct http_srv* svc)
     */
 
     for (;;) {
-        printf("a more for loop\n");
+        LOG_VERBOSE("a more for loop");
 
         struct timeval now;
         gettimeofday(&now, NULL);
@@ -91,6 +95,9 @@ void serve(struct http_srv* svc)
         int timeout = http_timer_minimal_timeout();
         nfds = epoll_wait(svc->epollfd, events, 1024, timeout);
         if (nfds == -1) {
+            if (errno == EINTR) {
+                continue;
+            }
             perror("epoll_wait");
             exit(EXIT_FAILURE);
         }
@@ -104,7 +111,7 @@ void serve(struct http_srv* svc)
                 } else if (conn->state == CONN_WRITE) {
                     handle_write(conn);
                 } else {
-                    printf("%s line%d invalid conn state\n", __FILE__, __LINE__);
+                    LOG_WARN("Invalid connect state");
                 }
             } 
         }

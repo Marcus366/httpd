@@ -1,10 +1,11 @@
 CC =gcc
 FLAG =-Wall -std=c99 -g
-OBJS =httpd.o http_srv.o http_conn.o http_req.o http_res.o http_timer.o
+OBJS =httpd.o http_srv.o http_conn.o http_req.o http_res.o http_timer.o http_log.o http_conf.o
 
 .PHONY: all
 
-all: httpd run clean
+run: httpd
+	sudo ./httpd
 
 %.o:%.c %.h
 	$(CC) $(FLAG) -c $< -o $@
@@ -12,9 +13,8 @@ all: httpd run clean
 httpd: $(OBJS)
 	$(CC) $(FLAG) $(OBJS) -o $@
 
-run: httpd
-	sudo ./httpd
-
 clean:
 	rm *.o
 	rm httpd
+
+all: httpd run clean

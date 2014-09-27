@@ -36,10 +36,6 @@ struct http_timer* http_timer_cancel(struct http_timer *timer);
 
 int http_timer_minimal_timeout();
 
-static void
-http_timer_trigger(struct http_timer *timer)
-{
-   timer->cb(timer->arg);
-}
+void http_timer_trigger(struct http_timer *timer);
 
 #endif

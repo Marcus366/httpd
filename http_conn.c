@@ -11,6 +11,7 @@
 #include "http_req.h"
 #include "http_res.h"
 #include "http_timer.h"
+#include "http_log.h"
 
 struct http_conn* new_http_conn(struct http_srv* srv, int sockfd)
 {
@@ -59,7 +60,7 @@ int handle_new_connect(struct http_srv* srv)
         return -1;
     }
 
-    printf("%s line%d: accept address %s\n", __FILE__, __LINE__, inet_ntoa(conn_addr.sin_addr));
+    LOG_INFO("accept address %s", inet_ntoa(conn_addr.sin_addr));
     
     struct epoll_event ev;
     ev.events = EPOLLIN | EPOLLET;
@@ -75,7 +76,7 @@ int handle_new_connect(struct http_srv* srv)
 void http_close_cb(void* arg)
 {
     struct http_conn *conn = (struct http_conn*)arg;
-    printf("http_close_cb\n");
+    LOG_DEBUG("http_close_cb");
     close(conn->sockfd);
 }
 
@@ -95,7 +96,8 @@ int handle_read(struct http_conn* conn)
     http_recv_req(conn->req, conn->sockfd);
 
     if (http_parse_req(conn->req)) {
-        printf("parse request: method:%s uri:%s version:%s\n", conn->req->method, conn->req->uri, conn->req->version);
+        LOG_DEBUG("parse request: method:%s uri:%s version:%s",
+                conn->req->method, conn->req->uri, conn->req->version);
         struct epoll_event ev;
         ev.events = EPOLLOUT | EPOLLET;
         ev.data.ptr = conn;
@@ -118,7 +120,7 @@ int handle_write(struct http_conn* conn)
     }
 
     if (http_send_res(conn->res, conn->sockfd) == SEND_FINISH) {
-        printf("SEND_FINISH\n");
+        LOG_VERBOSE("SEND_FINISH\n");
         SET_CONN_STATE(conn, CONN_WAIT_CLOSE);
         http_timer_create(1e6, http_close_cb, conn, TIMER_ONCE);
     }

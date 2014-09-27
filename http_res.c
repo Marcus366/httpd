@@ -8,6 +8,7 @@
 
 #include "http_req.h"
 #include "http_res.h"
+#include "http_log.h"
 
 static inline int copy_and_mv(char **out, char* in)
 {
@@ -79,7 +80,7 @@ enum send_state http_send_res(struct http_res *res, int sockfd)
 {
     for (;;) {
         ssize_t nwrite, free = res->buf_len - res->send_idx;
-        printf("write %d bytes\n", free);
+        LOG_VERBOSE("write %d bytes", free);
         nwrite = write(sockfd, res->send_buf + res->send_idx, free);
         if (nwrite == -1) {
             if (errno == EINTR) {

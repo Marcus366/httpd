@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "http_timer.h"
+#include "http_log.h"
 
 static struct http_timer *timer_head;
 static int timer_count;
@@ -28,7 +29,7 @@ int http_timer_minimal_timeout()
         }
         timer = timer->lnext;
     }
-    printf("minimal timeout:%ld\n", (long)(min * 1e-3));
+    LOG_VERBOSE("minimal timeout:%ld\n", (long)(min * 1e-3));
 
     return min * 1e-3;
 }
@@ -81,10 +82,16 @@ void http_timer_run(struct timeval last, struct timeval now)
                 timer->timeout = timer->interval;
                 timer = timer->lnext;
             } else {
-                printf("invalid type of timer\n");
+                LOG_WARN("invalid type of timer\n");
             }
         } else {
             timer = timer->lnext;
         }
     }
+}
+
+void
+http_timer_trigger(struct http_timer *timer)
+{
+   timer->cb(timer->arg);
 }
