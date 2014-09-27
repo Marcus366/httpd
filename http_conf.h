@@ -4,7 +4,6 @@
 #include "http_log.h"
 
 struct http_conf {
-    enum http_log_level log_level;
 };
 
 struct http_conf* http_default_conf();

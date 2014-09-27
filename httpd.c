@@ -27,6 +27,7 @@ int main(int argc, char** argv)
     }
 
     conf = http_default_conf();
+    http_read_conf(conf, "httpd.conf");
 
     struct http_srv* srv = new_http_srv(80);
     if (srv != NULL) {

@@ -57,11 +57,11 @@ do {                                                          \
 #define LOG_IGN 1
 
 enum http_log_level {
-    ll_verbose,
-    ll_debug,
-    ll_info,
-    ll_warn,
-    ll_error
+    ll_verbose = 0,
+    ll_debug   = 1,
+    ll_info    = 2,
+    ll_warn    = 3,
+    ll_error   = 4
 };
 
 enum http_log_level log_level;
