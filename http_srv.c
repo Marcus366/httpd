@@ -18,7 +18,7 @@ struct http_srv* new_http_srv(int port)
 
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
     if (listenfd == -1) {
-        perror("socket");
+        LOG_ERROR("socket: %s", strerror(errno));
         return NULL;
     }
 
@@ -30,7 +30,7 @@ struct http_srv* new_http_srv(int port)
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
     if (bind(listenfd, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
-        perror("bind");
+        LOG_ERROR("bind: %s", strerror(errno));
         return NULL;
     }
 
@@ -56,14 +56,14 @@ void serve(struct http_srv* svc)
     struct epoll_event ev, events[1024];
 
     if (listen(svc->listenfd, 1024) != 0) {
-        perror("listen");
+        LOG_ERROR("listen: %s", strerror(errno));
         return;
     }
     
     ev.events = EPOLLIN;
     ev.data.fd = svc->listenfd;
     if (epoll_ctl(svc->epollfd, EPOLL_CTL_ADD, svc->listenfd, &ev) == -1) {
-        perror("epoll_ctl: listen_sock");
+        LOG_ERROR("epoll_ctl: listen_sock: %s", strerror(errno));
         return;
     }
 
@@ -98,7 +98,7 @@ void serve(struct http_srv* svc)
             if (errno == EINTR) {
                 continue;
             }
-            perror("epoll_wait");
+            LOG_ERROR("epoll_wait: %s", strerror(errno));
             exit(EXIT_FAILURE);
         }
         for (int i = 0; i < nfds; ++i) {
@@ -112,7 +112,9 @@ void serve(struct http_srv* svc)
                     handle_write(conn);
                 } else {
                     LOG_WARN("Invalid connect state:%d of uuid:%llu", (int)conn->state, conn->uuid);
-                    http_close_conn(conn);
+                    if (conn->state != CONN_WAIT_CLOSE) {
+                        http_close_conn(conn);
+                    }
                 }
             } 
         }
