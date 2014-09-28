@@ -11,8 +11,7 @@ struct http_srv {
 };
 
 /*
- * New a http server.
- * Listen the given port.
+ * Create a http server and listen the given port.
  */
 struct http_srv* new_http_srv(int port);
 

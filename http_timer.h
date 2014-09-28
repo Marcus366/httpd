@@ -10,6 +10,9 @@ enum timer_type {
 
 typedef void (*http_timer_cb)(void *arg);
 
+/* TODO:
+ * Use binary threaded tree to manage http_timer.
+ */
 struct http_timer {
     http_timer_cb        cb;
     void                *arg;

@@ -1,11 +1,13 @@
 #ifndef __LOG_H__
 #define __LOG_H__
 
-//VERBOSE 37 white
-//DEBUG   34 blue 
-//INFO    36 green
-//WARN    33 yellow
-//ERROR   31 red
+/*
+ * This is a logger.
+ * Now it just support debug log and haven't runtime file log.
+ * If "#define __DEBUG__", the LOG MARCOS will log the message
+ * with different level and different color otherwise the MARCOS
+ * will all become null operation.
+ */
 
 #define __DEBUG__
 
