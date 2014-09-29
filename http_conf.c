@@ -22,7 +22,7 @@ http_read_conf(struct http_conf *conf, char *filename)
     }
 
     char token[64], flag[64];
-    fscanf(file, "%s %s", token, flag);
+    (void)fscanf(file, "%s %s", token, flag);
     if (strncasecmp(token, "log_level", 64) == 0) {
         if (strncasecmp(flag, "verbose", 64) == 0) {
             log_level = ll_verbose;

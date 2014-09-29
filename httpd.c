@@ -31,7 +31,7 @@ int main(int argc, char** argv)
                 LOG_ERROR("open httpd.pid: %s", strerror(errno));
                 exit(EXIT_FAILURE);
             }
-            fscanf(file, "%d", &pid);
+            (void)fscanf(file, "%d", &pid);
             fclose(file);
 
             if (kill(pid, SIGHUP) == -1) {

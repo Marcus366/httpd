@@ -10,7 +10,10 @@
 #include "http_res.h"
 #include "http_log.h"
 
-static inline int copy_and_mv(char **out, char* in)
+#include "http_fcache.h"
+
+static inline
+int copy_and_mv(char **out, char* in)
 {
     while (*in != 0) {
         *((*out)++) = *in++;
@@ -19,7 +22,8 @@ static inline int copy_and_mv(char **out, char* in)
     return 1;
 }
 
-struct http_res* new_http_res()
+struct http_res*
+new_http_res()
 {
     struct http_res *res = (struct http_res*)malloc(sizeof(struct http_res));
     if (res != NULL) {
@@ -32,7 +36,8 @@ struct http_res* new_http_res()
     return res;
 }
 
-void free_http_res(struct http_res *res)
+void
+free_http_res(struct http_res *res)
 {
     if (res != NULL) {
         free(res->send_buf);
@@ -40,22 +45,17 @@ void free_http_res(struct http_res *res)
     }
 }
 
-int http_gen_res(struct http_res *res, struct http_req *req)
+int
+http_gen_res(struct http_res *res, struct http_req *req)
 {
-    int fd = open(req->uri + 1, O_RDONLY);
-    if (fd == -1) {
-        perror("open failed");
-        return -1;
-    }
+    struct http_fcache_file *file;
 
-    struct stat st;
-    if (fstat(fd, &st) == -1) {
-        perror("fstat");
-        return -1;
+    file = http_fcache_getfile(fcache, req->uri + 1);
+    if (file == NULL) {
+        file = http_fcache_putfile(fcache, req->uri + 1);
     }
-
-    res->send_buf = (char*)malloc((int)st.st_size + 1024);
-    res->buf_size = (int)st.st_size + 1024;
+    res->send_buf = (char*)malloc((int)file->stat.st_size + 1024);
+    res->buf_size = (int)file->stat.st_size + 1024;
     char *buf = res->send_buf;
     copy_and_mv(&buf, req->version);
     copy_and_mv(&buf, " ");
@@ -63,21 +63,16 @@ int http_gen_res(struct http_res *res, struct http_req *req)
     copy_and_mv(&buf, "\r\n");
     copy_and_mv(&buf, "Server: Nginx\r\nDate: Sat, 31 Dec 2014 23:59:59 GMT\r\nContent-Type: text/html\r\n");
     char contentlen[64];
-    sprintf(contentlen, "Content-Length: %d\r\n", (int)st.st_size);
+    sprintf(contentlen, "Content-Length: %d\r\n", (int)file->stat.st_size);
     copy_and_mv(&buf, contentlen);
-    char readbuf[1024];
-    ssize_t nread;
-    while ((nread = read(fd, readbuf, 1024)) > 0) {
-       readbuf[nread] = 0;
-       copy_and_mv(&buf, readbuf);
-    }
-    close(fd);
+    memcpy(buf, file->addr, file->stat.st_size);
 
     res->buf_len = strlen(res->send_buf);
     return 0;
 }
 
-enum send_state http_send_res(struct http_res *res, int sockfd)
+enum send_state
+http_send_res(struct http_res *res, int sockfd)
 {
     for (;;) {
         ssize_t nwrite, free = res->buf_len - res->send_idx;
@@ -89,7 +84,7 @@ enum send_state http_send_res(struct http_res *res, int sockfd)
             } else if (errno == EAGAIN) {
                 return SEND_BLOCK;
             } else {
-                perror("write");
+                LOG_WARN("write: %s", strerror(errno));
                 return SEND_ERROR;
             }
         }

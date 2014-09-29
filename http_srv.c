@@ -10,6 +10,7 @@
 #include "http_conn.h"
 #include "http_timer.h"
 #include "http_log.h"
+#include "http_fcache.h"
 
 struct http_srv* new_http_srv(int port)
 {
@@ -46,6 +47,12 @@ struct http_srv* new_http_srv(int port)
 
     gettimeofday(&svc->now, NULL);
     http_timer_init();
+
+    /*
+     * FIXME:
+     * I don't know where to gracefully place the file cache.
+     */
+    fcache = http_fcache_create(10);
 
     return svc;
 }
