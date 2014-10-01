@@ -52,7 +52,9 @@ http_gen_res(struct http_res *res, struct http_req *req)
 
     file = http_fcache_getfile(fcache, req->uri + 1);
     if (file == NULL) {
-        file = http_fcache_putfile(fcache, req->uri + 1);
+        if ((file = http_fcache_putfile(fcache, req->uri + 1)) == NULL) {
+            return -1;
+        }
     }
     res->send_buf = (char*)malloc((int)file->stat.st_size + 1024);
     res->buf_size = (int)file->stat.st_size + 1024;

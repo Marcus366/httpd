@@ -80,7 +80,7 @@ void http_close_cb(void* arg)
 {
     struct http_conn *conn = (struct http_conn*)arg;
     LOG_DEBUG("http_close_cb");
-    close(conn->sockfd);
+    shutdown(conn->sockfd, SHUT_RD);
     free_http_conn(conn);
 }
 
@@ -129,7 +129,9 @@ int handle_write(struct http_conn* conn)
     if (http_send_res(conn->res, conn->sockfd) == SEND_FINISH) {
         LOG_VERBOSE("SEND_FINISH");
         SET_CONN_STATE(conn, CONN_WAIT_CLOSE);
-        http_timer_create(1e6, http_close_cb, conn, TIMER_ONCE);
+        http_close_conn(conn);
+//        shutdown(conn->sockfd, SHUT_WR);
+//        http_timer_create(1e6, http_close_cb, conn, TIMER_ONCE);
     }
     return 0;
 }
