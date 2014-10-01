@@ -63,7 +63,7 @@ http_gen_res(struct http_res *res, struct http_req *req)
     copy_and_mv(&buf, " ");
     copy_and_mv(&buf, HTTP_OK);
     copy_and_mv(&buf, "\r\n");
-    copy_and_mv(&buf, "Server: Nginx\r\nDate: Sat, 31 Dec 2014 23:59:59 GMT\r\nContent-Type: text/html\r\n");
+    copy_and_mv(&buf, "Server: ZZPServer\r\nDate: Sat, 31 Dec 2014 23:59:59 GMT\r\nContent-Type: text/html\r\n");
     char contentlen[64];
     sprintf(contentlen, "Content-Length: %d\r\n", (int)file->stat.st_size);
     copy_and_mv(&buf, contentlen);

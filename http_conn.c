@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <sys/epoll.h>
 #include <arpa/inet.h>
 
@@ -45,34 +46,44 @@ int handle_new_connect(struct http_srv* srv)
     int connfd;
     socklen_t conn_len = 0;
     struct sockaddr_in conn_addr;
-    memset(&conn_addr, 0, sizeof(conn_addr));
 
-    if ((connfd = accept(srv->listenfd, (struct sockaddr*)&conn_addr, &conn_len)) == -1) {
-        perror("accept");
-        return -1;
-    }
-    int fl = fcntl(connfd, F_GETFL);
-    if (fl == -1) {
-        perror("getfl");
-        close(connfd);
-        return -1;
-    }
-    if (fcntl(connfd, F_SETFL, fl & O_NONBLOCK) == -1) {
-        perror("setfl");
-        close(connfd);
-        return -1;
-    }
+    for (;;) {
+        memset(&conn_addr, 0, sizeof(conn_addr));
+        conn_len = sizeof(conn_addr);
 
-    struct http_conn *conn = new_http_conn(srv, connfd);
-    struct epoll_event ev;
-    ev.events = EPOLLIN | EPOLLET;
-    ev.data.ptr = conn;
-    if (epoll_ctl(srv->epollfd, EPOLL_CTL_ADD, connfd, &ev) == -1) {
-        perror("epoll_ctl");
-        http_close_conn(ev.data.ptr);
-        return -1;
+        if ((connfd = accept(srv->listenfd, (struct sockaddr*)&conn_addr, &conn_len)) == -1) {
+            if (errno == EINTR) {
+                continue;
+            } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                break;
+            } else {
+                perror("accept");
+                return -1;
+            }
+        }
+        int fl = fcntl(connfd, F_GETFL);
+        if (fl == -1) {
+            perror("getfl");
+            close(connfd);
+            return -1;
+        }
+        if (fcntl(connfd, F_SETFL, fl | O_NONBLOCK) == -1) {
+            perror("setfl");
+            close(connfd);
+            return -1;
+        }
+
+        struct http_conn *conn = new_http_conn(srv, connfd);
+        struct epoll_event ev;
+        ev.events = EPOLLIN | EPOLLET;
+        ev.data.ptr = conn;
+        if (epoll_ctl(srv->epollfd, EPOLL_CTL_ADD, connfd, &ev) == -1) {
+            perror("epoll_ctl");
+            http_close_conn(ev.data.ptr);
+            return -1;
+        }
+        LOG_INFO("accept address %s, sockfd:%d, uuid:%llu", inet_ntoa(conn_addr.sin_addr), conn->sockfd, conn->uuid);
     }
-    LOG_INFO("accept address %s, sockfd:%d, uuid:%llu", inet_ntoa(conn_addr.sin_addr), conn->sockfd, conn->uuid);
     return 0;
 }
 

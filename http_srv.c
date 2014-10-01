@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <netinet/in.h>
 #include <sys/epoll.h>
@@ -67,7 +68,17 @@ void serve(struct http_srv* svc)
         return;
     }
     
-    ev.events = EPOLLIN;
+    int fl = fcntl(svc->listenfd, F_GETFL);
+    if (fl == -1) {
+        LOG_ERROR("getfl: %s", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    if (fcntl(svc->listenfd, F_SETFL, fl | O_NONBLOCK) == -1) {
+        LOG_ERROR("setfl: %s", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    ev.events = EPOLLIN | EPOLLET;
     ev.data.fd = svc->listenfd;
     if (epoll_ctl(svc->epollfd, EPOLL_CTL_ADD, svc->listenfd, &ev) == -1) {
         LOG_ERROR("epoll_ctl: listen_sock: %s", strerror(errno));
