@@ -31,4 +31,12 @@ struct http_fcache* http_fcache_create(unsigned size);
 struct http_fcache_file* http_fcache_getfile(struct http_fcache *cache, const char *filename);
 struct http_fcache_file* http_fcache_putfile(struct http_fcache *cache, const char *filename);
 
+/*
+ * TODO:
+ *
+ * http_fcache_activate
+ *
+ * http_fcache_evict
+ */
+
 #endif

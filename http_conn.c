@@ -84,6 +84,11 @@ int handle_new_connect(struct http_srv* srv)
         }
         LOG_INFO("accept address %s, sockfd:%d, uuid:%llu", inet_ntoa(conn_addr.sin_addr), conn->sockfd, conn->uuid);
     }
+#ifdef __DEBUG__
+    if (conn_count > 10000) {
+        exit(EXIT_SUCCESS);
+    }
+#endif
     return 0;
 }
 
