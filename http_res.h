@@ -21,7 +21,8 @@
 enum res_state {
     REQ_GEN_BEGIN,
     REQ_GEN_END,
-    REQ_SENDING,
+    REQ_SEND_HEADER,
+    REQ_SEND_BODY,
     REQ_SEND_END
 };
 
@@ -37,6 +38,10 @@ struct http_res {
     size_t          buf_size;
     size_t          buf_len;
     size_t          send_idx;
+
+
+    struct http_fcache_file *file;
+    off_t                    offset;
 };
 
 struct http_res* new_http_res();

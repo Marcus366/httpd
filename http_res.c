@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/sendfile.h>
 #include <fcntl.h>
 #include <errno.h>
 
@@ -32,6 +33,9 @@ new_http_res()
         res->buf_size = 0;
         res->buf_len  = 0;
         res->send_idx = 0;
+
+        res->file     = NULL;
+        res->offset   = 0;
     }
     return res;
 }
@@ -67,34 +71,63 @@ http_gen_res(struct http_res *res, struct http_req *req)
     char contentlen[64];
     sprintf(contentlen, "Content-Length: %d\r\n", (int)file->stat.st_size);
     copy_and_mv(&buf, contentlen);
-    memcpy(buf, file->addr, file->stat.st_size);
-
     res->buf_len = strlen(res->send_buf);
+
+    res->file = file;
+
+    res->state = REQ_SEND_HEADER;
     return 0;
 }
 
 enum send_state
 http_send_res(struct http_res *res, int sockfd)
 {
-    for (;;) {
-        ssize_t nwrite, free = res->buf_len - res->send_idx;
-        LOG_VERBOSE("write %d bytes", free);
-        nwrite = write(sockfd, res->send_buf + res->send_idx, free);
-        if (nwrite == -1) {
-            if (errno == EINTR) {
-                continue;
-            } else if (errno == EAGAIN) {
+    if (res->state == REQ_SEND_HEADER) {
+        for (;;) {
+            ssize_t nwrite, rest = res->buf_len - res->send_idx;
+            LOG_VERBOSE("write %d bytes", rest);
+            nwrite = write(sockfd, res->send_buf + res->send_idx, rest);
+            if (nwrite == -1) {
+                if (errno == EINTR) {
+                    continue;
+                } else if (errno == EAGAIN) {
+                    return SEND_BLOCK;
+                } else {
+                    LOG_WARN("write: %s", strerror(errno));
+                    return SEND_ERROR;
+                }
+            }
+            res->send_idx += nwrite;
+            if (nwrite == 0 || nwrite == rest) {
+                res->state = REQ_SEND_BODY;
+                goto sendbody;
+            } else if (nwrite < rest) {
                 return SEND_BLOCK;
-            } else {
-                LOG_WARN("write: %s", strerror(errno));
-                return SEND_ERROR;
             }
         }
-        res->send_idx += nwrite;
-        if (nwrite == 0 || nwrite == free) {
-            return SEND_FINISH;
-        } else if (nwrite < free) {
-            return SEND_BLOCK;
+    } else if (res->state == REQ_SEND_BODY) {
+sendbody:
+        for (;;) {
+            ssize_t nwrite, rest = res->file->stat.st_size - res->offset;
+            nwrite = sendfile(sockfd, res->file->fd, &res->offset, rest);
+            if (nwrite == -1) {
+                if (errno == EINTR) {
+                    continue;
+                } else if (errno == EAGAIN) {
+                    return SEND_BLOCK;
+                } else {
+                    LOG_WARN("sendfile: %s", strerror(errno));
+                    return SEND_ERROR;
+                }
+            }
+            if (res->offset == res->file->stat.st_size) {
+                return SEND_FINISH;
+            } else {
+                return SEND_BLOCK;
+            }
         }
+    } else {
+        LOG_WARN("Invalid response state");
+        return SEND_FINISH;
     }
 }

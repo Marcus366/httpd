@@ -9,7 +9,7 @@
 
 
 struct http_fcache_file {
-    void         *addr;
+//    void         *addr;
     int           fd;
     
     const char   *name;

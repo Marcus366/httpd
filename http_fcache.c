@@ -67,10 +67,12 @@ http_fcache_putfile(struct http_fcache *cache, const char *filename)
         goto fail;
     }
 
+    /*
     if ((file->addr = mmap(0, file->stat.st_size, PROT_READ, MAP_PRIVATE, file->fd, 0)) == (void*)-1) {
         LOG_WARN("mmap file[%s] fail: %s", filename, strerror(errno));
         goto fail;
     }
+    */
 
     file->name = strdup(filename);
     file->hash.key = file->name;
