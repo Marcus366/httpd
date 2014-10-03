@@ -49,6 +49,8 @@ free_http_res(struct http_res *res)
     }
 }
 
+char *global_buf = "HTTP/1.1 200 OK\r\nServer: ZZPServer\r\nDate: Sat, 31 Dec 2014 23:59:59 GMT\r\nContent-Type: text/html\r\n";
+
 int
 http_gen_res(struct http_res *res, struct http_req *req)
 {
@@ -63,11 +65,7 @@ http_gen_res(struct http_res *res, struct http_req *req)
     res->send_buf = (char*)malloc((int)file->stat.st_size + 1024);
     res->buf_size = (int)file->stat.st_size + 1024;
     char *buf = res->send_buf;
-    copy_and_mv(&buf, req->version);
-    copy_and_mv(&buf, " ");
-    copy_and_mv(&buf, HTTP_OK);
-    copy_and_mv(&buf, "\r\n");
-    copy_and_mv(&buf, "Server: ZZPServer\r\nDate: Sat, 31 Dec 2014 23:59:59 GMT\r\nContent-Type: text/html\r\n");
+    copy_and_mv(&buf, global_buf);
     char contentlen[64];
     sprintf(contentlen, "Content-Length: %d\r\n", (int)file->stat.st_size);
     copy_and_mv(&buf, contentlen);
