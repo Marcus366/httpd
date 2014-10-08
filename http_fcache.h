@@ -9,7 +9,6 @@
 
 
 struct http_fcache_file {
-//    void         *addr;
     int           fd;
     
     const char   *name;
@@ -32,9 +31,13 @@ struct http_fcache_file* http_fcache_getfile(struct http_fcache *cache, const ch
 struct http_fcache_file* http_fcache_putfile(struct http_fcache *cache, const char *filename);
 
 /*
+ * Put a node to the head of lru head.
+ */
+void http_fcache_activate(struct http_fcache_file *file);
+
+
+/*
  * TODO:
- *
- * http_fcache_activate
  *
  * http_fcache_evict
  */
