@@ -10,12 +10,18 @@
 #include "http_config.h"
 #include "http_log.h"
 
-static http_config *conf = NULL;
+http_config *config = NULL;
+
+CONFIG_VARIABLE(int, port);
+CONFIG_INTERFACE(void, set_port) {
+    port = lua_tointeger(L, -1);
+    lua_pop(L, 1);
+}
 
 void
 sighup(int signo) {
     LOG_VERBOSE("sighup");
-    http_read_conf(conf, "httpd.conf");
+    http_reload_config(config, "httpd.conf");
 }
 
 int main(int argc, char** argv)
@@ -52,8 +58,12 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
 
-    conf = http_default_conf();
-    http_read_conf(conf, "httpd.conf");
+    http_log_set_level(ll_verbose);
+
+    config = http_create_config();
+    http_reigster_config_directive(config, "set_port", (config_handler)set_port);
+    http_load_config(config, "httpd.conf");
+    LOG_VERBOSE("%d", port);
 
     pid = getpid();
     if ((file = fopen("logs/httpd.pid", "w")) == NULL) {

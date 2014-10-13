@@ -15,12 +15,12 @@ struct http_fcache_file {
     struct stat   stat;
 
     struct hnode  hash;
-    struct lnode  lru;
+    listnode      lru;
 };
 
 struct http_fcache {
     struct htable table;
-    struct lnode  lru;
+    listnode      lru;
 };
 
 struct http_fcache *fcache;
