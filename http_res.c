@@ -62,12 +62,12 @@ http_gen_res(struct http_res *res, struct http_req *req)
             return -1;
         }
     }
-    res->send_buf = (char*)malloc((int)file->stat.st_size + 1024);
-    res->buf_size = (int)file->stat.st_size + 1024;
+    res->send_buf = (char*)malloc(1024);
+    res->buf_size = 1024;
     char *buf = res->send_buf;
     copy_and_mv(&buf, global_buf);
     char contentlen[64];
-    sprintf(contentlen, "Content-Length: %d\r\n", (int)file->stat.st_size);
+    sprintf(contentlen, "Content-Length: %d\r\n\r\n", (int)file->stat.st_size);
     copy_and_mv(&buf, contentlen);
     res->buf_len = strlen(res->send_buf);
 
@@ -108,6 +108,7 @@ sendbody:
         for (;;) {
             ssize_t nwrite, rest = res->file->stat.st_size - res->offset;
             nwrite = sendfile(sockfd, res->file->fd, &res->offset, rest);
+            LOG_DEBUG("offset:%d rest:%d have written:%d", (int)res->offset, (int)rest, (int)nwrite);
             if (nwrite == -1) {
                 if (errno == EINTR) {
                     continue;

@@ -33,7 +33,7 @@ struct http_fcache_file* http_fcache_putfile(struct http_fcache *cache, const ch
 /*
  * Put a node to the head of lru head.
  */
-void http_fcache_activate(struct http_fcache_file *file);
+void http_fcache_activate(struct http_fcache* cache, struct http_fcache_file *file);
 
 
 /*

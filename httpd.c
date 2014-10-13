@@ -7,10 +7,10 @@
 #include <sys/types.h>
 
 #include "http_srv.h"
-#include "http_conf.h"
+#include "http_config.h"
 #include "http_log.h"
 
-static struct http_conf *conf = NULL;
+static http_config *conf = NULL;
 
 void
 sighup(int signo) {

@@ -146,8 +146,8 @@ int handle_write(struct http_conn* conn)
         LOG_VERBOSE("SEND_FINISH");
         SET_CONN_STATE(conn, CONN_WAIT_CLOSE);
         http_close_conn(conn);
-//        shutdown(conn->sockfd, SHUT_WR);
-//        http_timer_create(1e6, http_close_cb, conn, TIMER_ONCE);
+        //shutdown(conn->sockfd, SHUT_WR);
+        //http_timer_create(1e6, http_close_cb, conn, TIMER_ONCE);
     }
     return 0;
 }
