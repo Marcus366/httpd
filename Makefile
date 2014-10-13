@@ -1,6 +1,6 @@
 CC =gcc
 CFLAG =-Wall -std=gnu99 -O2
-OBJS =httpd.o http_srv.o http_conn.o http_req.o http_res.o http_timer.o http_log.o http_conf.o \
+OBJS =httpd.o http_srv.o http_conn.o http_req.o http_res.o http_timer.o http_log.o http_config.o \
 	  http_fcache.o
 
 .PHONY: all httpd_debug
