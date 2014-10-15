@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "container/htable.h"
+#include "container/hashtable.h"
 
 
 struct http_fcache_file {
@@ -14,12 +14,12 @@ struct http_fcache_file {
     const char   *name;
     struct stat   stat;
 
-    struct hnode  hash;
+    hashnode      hash;
     listnode      lru;
 };
 
 struct http_fcache {
-    struct htable table;
+    hashtable     table;
     listnode      lru;
 };
 
@@ -39,7 +39,7 @@ void http_fcache_activate(struct http_fcache* cache, struct http_fcache_file *fi
 /*
  * TODO:
  *
- * http_fcache_evict
+ * http_fcache_passivate
  */
 
 #endif

@@ -73,7 +73,7 @@ int main(int argc, char** argv)
     fprintf(file, "%ld", (long)pid);
     fclose(file);
 
-    struct http_srv* srv = new_http_srv(8080);
+    struct http_srv* srv = new_http_srv(port);
     if (srv != NULL) {
         serve(srv);
     }

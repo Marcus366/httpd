@@ -41,7 +41,7 @@ http_fcache_create(unsigned size)
 {
     struct http_fcache *cache = (struct http_fcache*)malloc(sizeof(struct http_fcache));
     if (cache != NULL) {
-        htable_init(&cache->table, size, hash_file, cmp_file);
+        hashtable_init(&cache->table, size, hash_file, cmp_file);
         list_init(&cache->lru);
     }
     return cache;
@@ -69,7 +69,7 @@ http_fcache_putfile(struct http_fcache *cache, const char *filename)
 
     file->name = strdup(filename);
     file->hash.key = file->name;
-    htable_put(&cache->table, &file->hash);
+    hashtable_put(&cache->table, &file->hash);
     list_add_before(&file->lru, &cache->lru);
 
     return file;
@@ -83,9 +83,9 @@ malloc_fail:
 struct http_fcache_file*
 http_fcache_getfile(struct http_fcache *cache, const char *filename)
 {
-    struct hnode *hnode;
+    hashnode *hnode;
 
-    hnode = htable_get(&cache->table, filename);
+    hnode = hashtable_get(&cache->table, filename);
     if (hnode == NULL) {
         return NULL;
     }
