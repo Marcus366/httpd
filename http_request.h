@@ -1,7 +1,8 @@
-#ifndef __HTTP_REQ_H__
-#define __HTTP_REQ_H__
+#ifndef __HTTP_REQUEST_H__
+#define __HTTP_REQUEST_H__
 
 #include <unistd.h>
+#include "http_header.h"
 
 #define CR '\r'
 #define LF '\n'
@@ -9,7 +10,13 @@
 #define METHOD_GET  1
 #define METHOD_POST 2
 
-enum req_state {
+#define PARSING_REQUEST_LINE 0
+#define PARSING_REQUEST_HEAD 1
+#define PARSING_REQUEST_BODY 2
+#define PARSING_REQUEST_END  3
+
+
+typedef enum request_state {
     REQ_INVAL,
 
     REQ_PARSE_METHOD_BEGIN,
@@ -27,18 +34,21 @@ enum req_state {
     REQ_CRLF,
     REQ_CRLFCR,
     REQ_PARSE_END
-};
+} request_state_t;
 
 typedef struct http_request {
-    enum req_state   state;
-    char            *read_buf;
+    unsigned         major_state : 4;
+    unsigned         minor_state : 28;
+
+    u_char          *read_buf;
     size_t           buf_size;
+
     size_t           read_idx;
     size_t           check_idx;
 
-    char            *method;
-    char            *uri;
-    char            *version;
+    const char      *method;
+    const char      *uri;
+    const char      *version;
 } http_request_t;
 
 http_request_t* new_http_request(size_t bufsize);

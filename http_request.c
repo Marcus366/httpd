@@ -3,17 +3,22 @@
 #include <errno.h>
 
 #include "http_request.h"
+#include "string_utils.h"
+
+static int http_parse_request_line(http_request_t *req, u_char *start, u_char *end);
+static int http_parse_request_head(http_request_t *req, u_char *start, u_char *end);
+static int http_parse_request_body(http_request_t *req, u_char *start, u_char *end);
 
 http_request_t*
 new_http_request(size_t bufsize)
 {
     http_request_t *req = (http_request_t*)malloc(sizeof(http_request_t));
     if (req != NULL) {
-        req->state = REQ_PARSE_METHOD_BEGIN;
-        req->read_buf = (char*)malloc(bufsize);
-        req->buf_size = bufsize;
-        req->read_idx = 0;
-        req->check_idx = 0;
+        req->major_state = PARSING_REQUEST_LINE;
+        req->read_buf    = (u_char*)malloc(bufsize);
+        req->buf_size    = bufsize;
+        req->read_idx    = 0;
+        req->check_idx   = 0;
     }
     return req;
 }
@@ -54,7 +59,7 @@ http_recv_request(http_request_t *req, int sockfd)
         }
         if (req->read_idx == req->buf_size) {
             req->buf_size = req->buf_size << 1;;
-            req->read_buf = (char*)realloc(req->read_buf, req->buf_size);
+            req->read_buf = (u_char*)realloc(req->read_buf, req->buf_size);
         }
     }
     return cnt;
@@ -64,59 +69,53 @@ http_recv_request(http_request_t *req, int sockfd)
 int
 http_parse_request(http_request_t *req)
 {
-    char *c;
-    while (req->check_idx < req->read_idx) {
-        c = req->read_buf + req->check_idx++;
-        switch (req->state) {
-            case REQ_PARSE_METHOD_BEGIN:
-                req->method = c;
-                req->state = REQ_PARSING_METHOD;
-                break;
-            case REQ_PARSING_METHOD:
-                if (*c == ' ') {
-                    *c = 0;
-                    req->state = REQ_PARSE_URI_BEGIN;
-                }
-                break;
-            case REQ_PARSE_URI_BEGIN:
-                req->uri = c;
-                req->state = REQ_PARSING_URI;
-                break;
-            case REQ_PARSING_URI:
-                if (*c == ' ') {
-                    *c = 0;
-                    req->state = REQ_PARSE_VERSION_BEGIN;
-                }
-                break;
-            case REQ_PARSE_VERSION_BEGIN:
-                req->version = c;
-                req->state = REQ_PARSING_VERSION;
-                break;
-            case REQ_PARSING_VERSION:
-                if (*c == '\r') {
-                    *c = 0;
-                    req->state = REQ_CR;
-                }
-                break;
-            case REQ_CR:
-                if (*c == '\n') {
-                    req->state = REQ_CRLF;
-                }
-                break;
-            case REQ_CRLF:
-                if (*c == '\r') {
-                    req->state = REQ_CRLFCR;
-                }
-                break;
-            case REQ_CRLFCR:
-                if (*c == '\n') {
-                    req->state = REQ_PARSE_END;
-                }
-                return 1;
-            default:
-                break;
-        }
+    int ret = 0;
+    u_char *start = req->read_buf + req->check_idx;
+    u_char *end   = req->read_buf + req->read_idx;
+
+    if ((end = str_substr(start, end, "\r\n")) == NULL) {
+        return ret;
     }
+
+    switch (req->major_state) {
+    case PARSING_REQUEST_LINE:
+        ret = http_parse_request_line(req, start, end);
+        break;
+    case PARSING_REQUEST_HEAD:
+        break;
+    case PARSING_REQUEST_BODY:
+        break;
+    }
+
+    return ret;
+}
+
+
+int
+http_parse_request_line(http_request_t *req, u_char *start, u_char *end)
+{
+    u_char* p;
+
+    if ((p = str_substr(start, end, " ")) == NULL) {
+        return -1;
+    } else {
+        req->method = (const char*)start;
+        *p = '\0';
+    }
+
+    start = p + 1;
+    if ((p = str_substr(start, end, " ")) == NULL) {
+        return -1;
+    } else {
+        req->uri = (const char*)start;
+        *p = '\0';
+    }
+
+    req->version = (const char*)(p + 1);
+    *end = '\0';
+
+    req->major_state = PARSING_REQUEST_HEAD;
+
     return 0;
 }
 
