@@ -1,6 +1,8 @@
 #ifndef __HTTP_RES_H__
 #define __HTTP_RES_H__
 
+#include "http_request.h"
+
 //HTTP Status Code
 #define HTTP_OK                      "200 OK"
 #define HTTP_CREATED                 "201"
@@ -52,7 +54,7 @@ void             free_http_res(struct http_res *res);
  * It is called after parse the request, and generate the response
  * string in the buffer.
  */
-int http_gen_res(struct http_res *res, struct http_req* req);
+int http_gen_res(struct http_res *res, http_request_t* req);
 
 /*
  * Send the response to sockfd.

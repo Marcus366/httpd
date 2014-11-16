@@ -9,7 +9,7 @@
 
 #include "http_srv.h"
 #include "http_conn.h"
-#include "http_req.h"
+#include "http_request.h"
 #include "http_res.h"
 #include "http_timer.h"
 #include "http_log.h"
@@ -33,7 +33,7 @@ struct http_conn* new_http_conn(struct http_srv* srv, int sockfd)
 void free_http_conn(struct http_conn* conn)
 {
     if (conn->req) {
-        free_http_req(conn->req);
+        free_http_request(conn->req);
     }
     if (conn->res) {
         free_http_res(conn->res);
@@ -110,12 +110,12 @@ int http_close_conn(struct http_conn* conn)
 int handle_read(struct http_conn* conn)
 {
     if (conn->req == NULL) {
-        conn->req = new_http_req(1024);
+        conn->req = new_http_request(1024);
     }
 
-    http_recv_req(conn->req, conn->sockfd);
+    http_recv_request(conn->req, conn->sockfd);
 
-    if (http_parse_req(conn->req)) {
+    if (http_parse_request(conn->req)) {
         LOG_DEBUG("parse request: method:%s uri:%s version:%s",
                 conn->req->method, conn->req->uri, conn->req->version);
         struct epoll_event ev;

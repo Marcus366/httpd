@@ -2,11 +2,12 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#include "http_req.h"
+#include "http_request.h"
 
-struct http_req* new_http_req(size_t bufsize)
+http_request_t*
+new_http_request(size_t bufsize)
 {
-    struct http_req *req = (struct http_req*)malloc(sizeof(struct http_req));
+    http_request_t *req = (http_request_t*)malloc(sizeof(http_request_t));
     if (req != NULL) {
         req->state = REQ_PARSE_METHOD_BEGIN;
         req->read_buf = (char*)malloc(bufsize);
@@ -17,7 +18,9 @@ struct http_req* new_http_req(size_t bufsize)
     return req;
 }
 
-void free_http_req(struct http_req *req)
+
+void
+free_http_request(http_request_t *req)
 {
     if (req != NULL) {
         free(req->read_buf);
@@ -25,7 +28,9 @@ void free_http_req(struct http_req *req)
     }
 }
 
-ssize_t http_recv_req(struct http_req *req, int sockfd)
+
+ssize_t
+http_recv_request(http_request_t *req, int sockfd)
 {
     ssize_t cnt = 0;
 
@@ -55,7 +60,9 @@ ssize_t http_recv_req(struct http_req *req, int sockfd)
     return cnt;
 }
 
-int http_parse_req(struct http_req *req)
+
+int
+http_parse_request(http_request_t *req)
 {
     char *c;
     while (req->check_idx < req->read_idx) {
@@ -112,3 +119,4 @@ int http_parse_req(struct http_req *req)
     }
     return 0;
 }
+

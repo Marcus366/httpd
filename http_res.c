@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include "http_req.h"
+#include "http_request.h"
 #include "http_res.h"
 #include "http_log.h"
 
@@ -49,12 +49,16 @@ free_http_res(struct http_res *res)
     }
 }
 
-char *global_buf = "HTTP/1.1 200 OK\r\nServer: ZZPServer\r\nDate: Sat, 31 Dec 2014 23:59:59 GMT\r\nContent-Type: text/html\r\n";
+char *global_buf = (char*)"HTTP/1.1 200 OK\r\nServer: ZZPServer\r\nDate: Sat, 31 Dec 2014 23:59:59 GMT\r\nContent-Type: text/html\r\n";
 
 int
-http_gen_res(struct http_res *res, struct http_req *req)
+http_gen_res(struct http_res *res, http_request_t *req)
 {
     struct http_fcache_file *file;
+
+    if (strcmp(req->uri, "/") == 0) {
+      req->uri = (char*)"/index.html";
+    }
 
     file = http_fcache_getfile(fcache, req->uri + 1);
     if (file == NULL) {

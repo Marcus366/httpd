@@ -1,6 +1,8 @@
 #ifndef __HTTP_CONN_H__
 #define __HTTP_CONN_H__
 
+#include "http_request.h"
+
 enum conn_state {
     CONN_IDLE       = 0,
     CONN_READ       = 1,
@@ -16,7 +18,7 @@ struct http_conn {
     ull              uuid;
     int              sockfd;
     enum conn_state  state;
-    struct http_req *req;
+    http_request_t  *req;
     struct http_res *res;
 };
 

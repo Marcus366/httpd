@@ -29,7 +29,7 @@ enum req_state {
     REQ_PARSE_END
 };
 
-struct http_req {
+typedef struct http_request {
     enum req_state   state;
     char            *read_buf;
     size_t           buf_size;
@@ -39,12 +39,12 @@ struct http_req {
     char            *method;
     char            *uri;
     char            *version;
-};
+} http_request_t;
 
-struct http_req* new_http_req(size_t bufsize);
-void             free_http_req(struct http_req *req);
+http_request_t* new_http_request(size_t bufsize);
+void            free_http_request(http_request_t *req);
 
-ssize_t http_recv_req(struct http_req *req, int sockfd);
-int     http_parse_req(struct http_req *req);
+ssize_t http_recv_request(http_request_t *req, int sockfd);
+int     http_parse_request(http_request_t *req);
 
 #endif
