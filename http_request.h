@@ -3,9 +3,13 @@
 
 #include <unistd.h>
 #include "http_header.h"
+#include "http_mem.h"
 
-#define CR '\r'
-#define LF '\n'
+#define CR    '\r'
+#define LF    '\n'
+
+#define CRLF  ((u_char*)"\r\n")
+#define SPACE ((u_char*)" ")
 
 #define METHOD_GET  1
 #define METHOD_POST 2
@@ -36,6 +40,7 @@ typedef enum request_state {
     REQ_PARSE_END
 } request_state_t;
 
+
 typedef struct http_request {
     unsigned         major_state : 4;
     unsigned         minor_state : 28;
@@ -46,17 +51,20 @@ typedef struct http_request {
     size_t           read_idx;
     size_t           check_idx;
 
-    const char      *method;
-    const char      *uri;
-    const char      *version;
+    http_mem_t       method;
+    http_mem_t       uri;
+    http_mem_t       version;
 
     http_headers_t  *http_headers;
 } http_request_t;
 
+
 http_request_t* new_http_request(size_t bufsize);
 void            free_http_request(http_request_t *req);
 
+
 ssize_t http_recv_request(http_request_t *req, int sockfd);
 int     http_parse_request(http_request_t *req);
+
 
 #endif

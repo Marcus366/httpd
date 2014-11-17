@@ -10,6 +10,7 @@ OBJS =httpd.o					\
 			http_config.o		\
 			http_fcache.o		\
 			http_header.o		\
+			http_mem.o			\
 			string_utils.o
 
 .PHONY: all httpd_debug

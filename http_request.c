@@ -3,11 +3,12 @@
 #include <errno.h>
 
 #include "http_request.h"
+#include "http_mem.h"
 #include "string_utils.h"
 
-static int http_parse_request_line(http_request_t *req, u_char *start, u_char *end);
-static int http_parse_request_head(http_request_t *req, u_char *start, u_char *end);
-static int http_parse_request_body(http_request_t *req, u_char *start, u_char *end);
+static int http_parse_request_line(http_request_t *req, http_mem_t mem);
+static int http_parse_request_head(http_request_t *req, http_mem_t mem);
+static int http_parse_request_body(http_request_t *req, http_mem_t mem);
 
 http_request_t*
 new_http_request(size_t bufsize)
@@ -74,53 +75,65 @@ int
 http_parse_request(http_request_t *req)
 {
     int ret = 0;
-    u_char *start = req->read_buf + req->check_idx;
-    u_char *end   = req->read_buf + req->read_idx;
+    http_mem_t token;
+    http_mem_t mem = http_mem_create(req->read_buf + req->check_idx,
+        req->read_idx - req->check_idx);
 
-    while ((end = str_substr(start, end, "\r\n")) != NULL) {
+    do {
+        mem = http_mem_create(req->read_buf + req->check_idx,
+            req->read_idx - req->check_idx);
+        token = http_mem_cut(mem, http_mem_create(CRLF, sizeof(CRLF) - 1));
+        if (token.base == NULL) {
+            break;
+        }
 
-      switch (req->major_state) {
-      case PARSING_REQUEST_LINE:
-          ret = http_parse_request_line(req, start, end);
-          break;
-      case PARSING_REQUEST_HEAD:
-          break;
-      case PARSING_REQUEST_BODY:
-          break;
-      }
+        switch (req->major_state) {
+        case PARSING_REQUEST_LINE:
+            ret = http_parse_request_line(req, token);
+            break;
+        case PARSING_REQUEST_HEAD:
+            ret = http_parse_request_head(req, token);
+            break;
+        case PARSING_REQUEST_BODY:
+            ret = http_parse_request_body(req, token);
+            break;
+        }
 
-      end += 2;
-      req->check_idx += (end - start);
-      start = req->read_buf + req->check_idx;
+        req->check_idx += token.len;
 
-    }
+    } while (1);
 
     return ret;
 }
 
 
 int
-http_parse_request_line(http_request_t *req, u_char *start, u_char *end)
+http_parse_request_line(http_request_t *req, http_mem_t mem)
 {
-    u_char* p;
-
-    if ((p = str_substr(start, end, " ")) == NULL) {
+    req->method = http_mem_cut(mem, http_mem_create(SPACE, 1));
+    if (http_mem_is_null(req->method)) {
         return -1;
     } else {
-        req->method = (const char*)start;
-        *p = '\0';
+        mem.len  -= req->method.len;
+        mem.base += req->method.len;
+        --req->method.len;
     }
 
-    start = p + 1;
-    if ((p = str_substr(start, end, " ")) == NULL) {
+    req->uri = http_mem_cut(mem, http_mem_create(SPACE, 1));
+    if (http_mem_is_null(req->uri)) {
         return -1;
     } else {
-        req->uri = (const char*)start;
-        *p = '\0';
+        mem.len  -= req->uri.len;
+        mem.base += req->uri.len;
+        --req->uri.len;
     }
 
-    req->version = (const char*)(p + 1);
-    *end = '\0';
+    req->version = http_mem_cut(mem, http_mem_create(CRLF, 2));
+    if (http_mem_is_null(req->version)) {
+        return -1;
+    } else {
+        req->version.len -= 2;;
+    }
 
     req->major_state = PARSING_REQUEST_HEAD;
 
@@ -129,7 +142,29 @@ http_parse_request_line(http_request_t *req, u_char *start, u_char *end)
 
 
 int
-http_parse_request_head(http_request_t *req, u_char *start, u_char *end)
+http_parse_request_head(http_request_t *req, http_mem_t mem)
+{
+    http_mem_t cut = http_mem_cut(mem, http_mem_create((u_char*)": ", 2));
+
+    http_mem_t attr  = http_mem_create(mem.base, cut.len - 2);
+    http_mem_t value = http_mem_create(mem.base + cut.len, mem.len - cut.len); 
+
+    if (http_mem_equal(mem, value)) {
+        return 1;
+    }
+
+    if (http_mem_is_null(attr) || http_mem_is_null(value)) {
+        return -1;
+    }
+
+    http_header_set(req->http_headers, attr, value);
+
+    return 0;
+}
+
+
+int
+http_parse_request_body(http_request_t *req, http_mem_t mem)
 {
     return 0;
 }
