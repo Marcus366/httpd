@@ -49,6 +49,8 @@ typedef struct http_request {
     const char      *method;
     const char      *uri;
     const char      *version;
+
+    http_headers_t  *http_headers;
 } http_request_t;
 
 http_request_t* new_http_request(size_t bufsize);

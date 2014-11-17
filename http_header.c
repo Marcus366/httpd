@@ -16,24 +16,55 @@ hash_str(const void *name)
     return (hash & 0x7FFFFFFF);
 }
 
+
 static int
 cmp_str(const void *lhs, const void *rhs)
 {
     return strcmp((const char*)lhs, (const char*)rhs);
 }
 
-void
-http_headers_init(http_headers *headers)
+
+http_headers_t*
+http_headers_new()
 {
-    headers->count = 0;
-    hashtable_init(&headers->table, 10, hash_str, cmp_str);
-    list_init(&headers->list);
+    http_headers_t *headers = (http_headers_t*)malloc(sizeof(http_headers_t));
+
+    if (headers != NULL) {
+      headers->count = 0;
+      hashtable_init(&headers->table, 10, hash_str, cmp_str);
+      list_init(&headers->list);
+    }
+
+    return headers;
 }
 
-http_header*
-http_header_set(http_headers *headers, char *attr, char *value)
+
+void
+http_headers_free(http_headers_t *headers)
 {
-    http_header *header;
+    http_header_t *header;
+    listnode *node;
+
+    node = headers->list.next;
+    header = container_of(node, http_header_t, link);
+    while (&header->link != &headers->list) {
+        list_del(&header->link);
+        free(header);
+
+        node = headers->list.next;
+        header = container_of(node, http_header_t, link);
+    }
+
+    hashtable_free(&headers->table);
+
+    free(headers);
+}
+
+
+http_header_t*
+http_header_set(http_headers_t *headers, char *attr, char *value)
+{
+    http_header_t *header;
 
     header = http_header_get(headers, attr);
     if (header != NULL) {
@@ -41,15 +72,18 @@ http_header_set(http_headers *headers, char *attr, char *value)
         return header;
     }
 
+    header = (http_header_t*)malloc(sizeof(http_header_t));
     header->attr  = attr;
     header->value = value;
 
     hashtable_put(&headers->table, &header->hash);
     list_add_before(&header->link, &headers->list);
+
+    return header;
 }
 
-http_header*
-http_header_get(http_headers *headers, char *attr)
+http_header_t*
+http_header_get(http_headers_t *headers, char *attr)
 {
     hashnode *node;
 
@@ -57,6 +91,6 @@ http_header_get(http_headers *headers, char *attr)
     if (node == NULL) {
         return NULL;
     } else {
-        return container_of(node, http_header, hash);
+        return container_of(node, http_header_t, hash);
     }
 }

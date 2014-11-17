@@ -19,6 +19,8 @@ new_http_request(size_t bufsize)
         req->buf_size    = bufsize;
         req->read_idx    = 0;
         req->check_idx   = 0;
+
+        req->http_headers = http_headers_new();
     }
     return req;
 }
@@ -28,6 +30,8 @@ void
 free_http_request(http_request_t *req)
 {
     if (req != NULL) {
+        http_headers_free(req->http_headers);
+
         free(req->read_buf);
         free(req);
     }
@@ -73,18 +77,22 @@ http_parse_request(http_request_t *req)
     u_char *start = req->read_buf + req->check_idx;
     u_char *end   = req->read_buf + req->read_idx;
 
-    if ((end = str_substr(start, end, "\r\n")) == NULL) {
-        return ret;
-    }
+    while ((end = str_substr(start, end, "\r\n")) != NULL) {
 
-    switch (req->major_state) {
-    case PARSING_REQUEST_LINE:
-        ret = http_parse_request_line(req, start, end);
-        break;
-    case PARSING_REQUEST_HEAD:
-        break;
-    case PARSING_REQUEST_BODY:
-        break;
+      switch (req->major_state) {
+      case PARSING_REQUEST_LINE:
+          ret = http_parse_request_line(req, start, end);
+          break;
+      case PARSING_REQUEST_HEAD:
+          break;
+      case PARSING_REQUEST_BODY:
+          break;
+      }
+
+      end += 2;
+      req->check_idx += (end - start);
+      start = req->read_buf + req->check_idx;
+
     }
 
     return ret;
@@ -119,3 +127,9 @@ http_parse_request_line(http_request_t *req, u_char *start, u_char *end)
     return 0;
 }
 
+
+int
+http_parse_request_head(http_request_t *req, u_char *start, u_char *end)
+{
+    return 0;
+}

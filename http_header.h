@@ -10,7 +10,7 @@ typedef struct http_headers {
     hashtable table;
     listnode  list;
 
-} http_headers;
+} http_headers_t;
 
 typedef struct http_header {
     char       *attr;
@@ -18,14 +18,18 @@ typedef struct http_header {
 
     hashnode    hash;
     listnode    link;
-} http_header;
+} http_header_t;
 
 
-void http_headers_init(http_headers *headers);
+/* Create a http headers stroage */
+http_headers_t* http_headers_new();
 
+/* Free memory of http headers */
+void http_headers_free(http_headers_t* headers);
 
-http_header* http_header_set(http_headers *headers, char *attr, char *value);
-http_header* http_header_get(http_headers *headers, char *attr);
+/* Setter/Getter of http_headers */
+http_header_t* http_header_set(http_headers_t *headers, char *attr, char *value);
+http_header_t* http_header_get(http_headers_t *headers, char *attr);
 
 
 #endif
