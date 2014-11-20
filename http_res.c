@@ -56,13 +56,9 @@ http_gen_res(struct http_res *res, http_request_t *req)
 {
     struct http_fcache_file *file;
 
-    if (strcmp(req->uri, "/") == 0) {
-      req->uri = (char*)"/index.html";
-    }
-
-    file = http_fcache_getfile(fcache, req->uri + 1);
+    file = http_fcache_getfile(fcache, req->uri.base + 1);
     if (file == NULL) {
-        if ((file = http_fcache_putfile(fcache, req->uri + 1)) == NULL) {
+        if ((file = http_fcache_putfile(fcache, req->uri.base + 1)) == NULL) {
             return -1;
         }
     }

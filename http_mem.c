@@ -1,4 +1,6 @@
 #include "http_mem.h"
+#include "http_log.h"
+#include <string.h>
 
 
 http_mem_t
@@ -15,7 +17,7 @@ http_mem_cut(http_mem_t mem, http_mem_t delmi)
     u_char *p = mem.base;
     unsigned i, offset;
 
-    for (offset = 0; offset + delmi.len < mem.len; ++offset) {
+    for (offset = 0; offset + delmi.len <= mem.len; ++offset) {
         for (i = 0; i < delmi.len; ++i) {
             if (p[offset + i] != delmi.base[i]) {
                 break;
@@ -65,3 +67,14 @@ http_mem_cmp(http_mem_t lhs, http_mem_t rhs)
 
     return 0;
 }
+
+
+void
+http_mem_print(http_mem_t mem)
+{
+    char str[1024];
+    memcpy(str, mem.base, mem.len);
+    str[mem.len] = 0;
+    LOG_DEBUG("%s", str);
+}
+

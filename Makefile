@@ -1,5 +1,5 @@
 CC =gcc
-CFLAG =-Wall -std=gnu99 -g
+CFLAG =-Wall -std=gnu99 -O2
 OBJS =httpd.o					\
 			http_srv.o			\
 			http_conn.o 		\
@@ -32,3 +32,4 @@ clean:
 	rm httpd
 
 all: httpd run clean
+

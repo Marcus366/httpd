@@ -117,7 +117,7 @@ int handle_read(struct http_conn* conn)
 
     if (http_parse_request(conn->req)) {
         LOG_DEBUG("parse request: method:%s uri:%s version:%s",
-                conn->req->method, conn->req->uri, conn->req->version);
+                conn->req->method.base, conn->req->uri.base, conn->req->version.base);
         struct epoll_event ev;
         ev.events = EPOLLOUT | EPOLLET;
         ev.data.ptr = conn;

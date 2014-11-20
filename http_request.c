@@ -3,12 +3,14 @@
 #include <errno.h>
 
 #include "http_request.h"
+#include "http_log.h"
 #include "http_mem.h"
 #include "string_utils.h"
 
 static int http_parse_request_line(http_request_t *req, http_mem_t mem);
 static int http_parse_request_head(http_request_t *req, http_mem_t mem);
 static int http_parse_request_body(http_request_t *req, http_mem_t mem);
+
 
 http_request_t*
 new_http_request(size_t bufsize)
@@ -82,7 +84,7 @@ http_parse_request(http_request_t *req)
     do {
         mem = http_mem_create(req->read_buf + req->check_idx,
             req->read_idx - req->check_idx);
-        token = http_mem_cut(mem, http_mem_create(CRLF, sizeof(CRLF) - 1));
+        token = http_mem_cut(mem, http_mem_create(CRLF, 2));
         if (token.base == NULL) {
             break;
         }
@@ -102,7 +104,6 @@ http_parse_request(http_request_t *req)
         req->check_idx += token.len;
 
     } while (1);
-
     return ret;
 }
 
@@ -110,14 +111,18 @@ http_parse_request(http_request_t *req)
 int
 http_parse_request_line(http_request_t *req, http_mem_t mem)
 {
+    LOG_DEBUG("parse request line");
+    http_mem_print(mem);
+
     req->method = http_mem_cut(mem, http_mem_create(SPACE, 1));
     if (http_mem_is_null(req->method)) {
         return -1;
     } else {
         mem.len  -= req->method.len;
         mem.base += req->method.len;
-        --req->method.len;
+        req->method.base[--req->method.len] = 0;
     }
+    http_mem_print(req->method);
 
     req->uri = http_mem_cut(mem, http_mem_create(SPACE, 1));
     if (http_mem_is_null(req->uri)) {
@@ -125,15 +130,18 @@ http_parse_request_line(http_request_t *req, http_mem_t mem)
     } else {
         mem.len  -= req->uri.len;
         mem.base += req->uri.len;
-        --req->uri.len;
+        req->uri.base[--req->uri.len] = 0;
     }
+    http_mem_print(req->uri);
 
     req->version = http_mem_cut(mem, http_mem_create(CRLF, 2));
     if (http_mem_is_null(req->version)) {
         return -1;
     } else {
-        req->version.len -= 2;;
+        req->version.len -= 2;
+        req->version.base[req->version.len] = 0;
     }
+    http_mem_print(req->version);
 
     req->major_state = PARSING_REQUEST_HEAD;
 
@@ -144,6 +152,8 @@ http_parse_request_line(http_request_t *req, http_mem_t mem)
 int
 http_parse_request_head(http_request_t *req, http_mem_t mem)
 {
+    LOG_DEBUG("parse request head");
+    http_mem_print(mem);
     http_mem_t cut = http_mem_cut(mem, http_mem_create((u_char*)": ", 2));
 
     http_mem_t attr  = http_mem_create(mem.base, cut.len - 2);

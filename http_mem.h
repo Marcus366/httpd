@@ -28,4 +28,8 @@ int http_mem_equal(http_mem_t lhs, http_mem_t rhs);
 int http_mem_cmp(http_mem_t lhs, http_mem_t rhs);
 
 
+void http_mem_print(http_mem_t mem);
+
+
 #endif
+
