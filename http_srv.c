@@ -8,7 +8,7 @@
 #include <sys/epoll.h>
 
 #include "http_srv.h"
-#include "http_conn.h"
+#include "http_connection.h"
 #include "http_timer.h"
 #include "http_log.h"
 #include "http_fcache.h"
@@ -121,9 +121,9 @@ void serve(struct http_srv* svc)
         }
         for (int i = 0; i < nfds; ++i) {
             if (events[i].data.fd == svc->listenfd) {
-                handle_new_connect(svc);
+                handle_new_connection(svc);
             } else {
-                struct http_conn *conn = events[i].data.ptr;
+                http_connection_t *conn = (http_connection_t*)events[i].data.ptr;
                 if (conn->state == CONN_READ) {
                     handle_read(conn);
                 } else if (conn->state == CONN_WRITE) {
@@ -131,7 +131,7 @@ void serve(struct http_srv* svc)
                 } else {
                     LOG_WARN("Invalid connect state:%d of uuid:%llu", (int)conn->state, conn->uuid);
                     if (conn->state != CONN_WAIT_CLOSE) {
-                        http_close_conn(conn);
+                        http_close_connection(conn);
                     }
                 }
             } 

@@ -5,7 +5,6 @@
 #include "http_request.h"
 #include "http_log.h"
 #include "http_mem.h"
-#include "string_utils.h"
 
 static int http_parse_request_line(http_request_t *req, http_mem_t mem);
 static int http_parse_request_head(http_request_t *req, http_mem_t mem);

@@ -12,7 +12,7 @@ enum conn_state {
 
 typedef unsigned long long ull;
 
-struct http_conn {
+typedef struct http_connection {
     struct http_srv *srv;
 
     ull              uuid;
@@ -20,18 +20,18 @@ struct http_conn {
     enum conn_state  state;
     http_request_t  *req;
     struct http_res *res;
-};
+} http_connection_t;
 
 #define SET_CONN_STATE(conn, newstate) do { conn->state = newstate; } while (0);
 
-struct http_conn* new_http_conn(struct http_srv* srv, int sockfd);
-void              free_http_conn(struct http_conn* conn);
+http_connection_t* new_http_connection(struct http_srv* srv, int sockfd);
+void              free_http_connection(http_connection_t* conn);
 
-int handle_new_connect(struct http_srv* svc);
+int handle_new_connection(struct http_srv* svc);
 
-int http_close_conn(struct http_conn* conn);
+int http_close_connection(http_connection_t* conn);
 
-int handle_read(struct http_conn* conn);
-int handle_write(struct http_conn* conn);
+int handle_read(http_connection_t* conn);
+int handle_write(http_connection_t* conn);
 
 #endif

@@ -8,7 +8,7 @@
 #include <arpa/inet.h>
 
 #include "http_srv.h"
-#include "http_conn.h"
+#include "http_connection.h"
 #include "http_request.h"
 #include "http_res.h"
 #include "http_timer.h"
@@ -16,9 +16,12 @@
 
 ull conn_count = 0;
 
-struct http_conn* new_http_conn(struct http_srv* srv, int sockfd)
+
+http_connection_t*
+new_http_connection(struct http_srv* srv, int sockfd)
 {
-    struct http_conn* conn = (struct http_conn*)malloc(sizeof(struct http_conn));
+    http_connection_t* conn = 
+        (http_connection_t*)malloc(sizeof(http_connection_t));
     if (conn != NULL) {
         conn->uuid   = conn_count++;
         conn->srv    = srv;
@@ -30,7 +33,9 @@ struct http_conn* new_http_conn(struct http_srv* srv, int sockfd)
     return conn;
 }
 
-void free_http_conn(struct http_conn* conn)
+
+void
+free_http_connection(http_connection_t* conn)
 {
     if (conn->req) {
         free_http_request(conn->req);
@@ -41,7 +46,9 @@ void free_http_conn(struct http_conn* conn)
     free(conn);
 }
 
-int handle_new_connect(struct http_srv* srv)
+
+int
+handle_new_connection(struct http_srv* srv)
 {
     int connfd;
     socklen_t conn_len = 0;
@@ -73,13 +80,13 @@ int handle_new_connect(struct http_srv* srv)
             return -1;
         }
 
-        struct http_conn *conn = new_http_conn(srv, connfd);
+        http_connection_t *conn = new_http_connection(srv, connfd);
         struct epoll_event ev;
         ev.events = EPOLLIN | EPOLLET;
         ev.data.ptr = conn;
         if (epoll_ctl(srv->epollfd, EPOLL_CTL_ADD, connfd, &ev) == -1) {
             perror("epoll_ctl");
-            http_close_conn(ev.data.ptr);
+            http_close_connection(conn);
             return -1;
         }
         LOG_INFO("accept address %s, sockfd:%d, uuid:%llu", inet_ntoa(conn_addr.sin_addr), conn->sockfd, conn->uuid);
@@ -92,22 +99,28 @@ int handle_new_connect(struct http_srv* srv)
     return 0;
 }
 
-void http_close_cb(void* arg)
+
+void
+http_close_cb(void* arg)
 {
-    struct http_conn *conn = (struct http_conn*)arg;
+    http_connection_t *conn = (http_connection_t*)arg;
     LOG_DEBUG("http_close_cb");
     shutdown(conn->sockfd, SHUT_RD);
-    free_http_conn(conn);
+    free_http_connection(conn);
 }
 
-int http_close_conn(struct http_conn* conn)
+
+int
+http_close_connection(http_connection_t* conn)
 {
     int ret = close(conn->sockfd);
-    free_http_conn(conn);
+    free_http_connection(conn);
     return ret;
 }
 
-int handle_read(struct http_conn* conn)
+
+int
+handle_read(http_connection_t* conn)
 {
     if (conn->req == NULL) {
         conn->req = new_http_request(1024);
@@ -123,7 +136,7 @@ int handle_read(struct http_conn* conn)
         ev.data.ptr = conn;
         if (epoll_ctl(conn->srv->epollfd, EPOLL_CTL_MOD, conn->sockfd, &ev) == -1) {
             perror("epoll mod");
-            http_close_conn(conn);
+            http_close_connection(conn);
             return -1;
         }
         conn->state = CONN_WRITE; 
@@ -132,12 +145,14 @@ int handle_read(struct http_conn* conn)
     return 0;
 }
 
-int handle_write(struct http_conn* conn)
+
+int
+handle_write(http_connection_t* conn)
 {
     if (conn->res == NULL) {
         conn->res = new_http_res();
         if (http_gen_res(conn->res, conn->req) == -1) {
-            http_close_conn(conn);
+            http_close_connection(conn);
             return -1;
         }
     }
@@ -145,7 +160,7 @@ int handle_write(struct http_conn* conn)
     if (http_send_res(conn->res, conn->sockfd) == SEND_FINISH) {
         LOG_VERBOSE("SEND_FINISH");
         SET_CONN_STATE(conn, CONN_WAIT_CLOSE);
-        http_close_conn(conn);
+        http_close_connection(conn);
         //shutdown(conn->sockfd, SHUT_WR);
         //http_timer_create(1e6, http_close_cb, conn, TIMER_ONCE);
     }
