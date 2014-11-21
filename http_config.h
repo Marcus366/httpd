@@ -26,13 +26,13 @@ typedef struct http_config_directive {
 
 typedef struct http_config {
     lua_State               *L;
-    http_config_directive   *directives;
+    listnode                directives;
 } http_config;
 
 
 
-
 http_config* http_create_config();
+void         http_free_config(http_config *config);
 
 
 void http_reigster_config_directive(http_config *config, const char *name, config_handler handler);

@@ -18,13 +18,17 @@ CONFIG_INTERFACE(void, set_port) {
     lua_pop(L, 1);
 }
 
+
 void
 sighup(int signo) {
+    (void) signo;
     LOG_VERBOSE("sighup");
     http_reload_config(config, "httpd.conf");
 }
 
-int main(int argc, char** argv)
+
+int
+main(int argc, char** argv)
 {
     int i;
     pid_t pid;
@@ -77,6 +81,10 @@ int main(int argc, char** argv)
     if (srv != NULL) {
         serve(srv);
     }
-    //never return
+
+    /* Never return. */
+    /* Make valgrind happy. */
+    http_free_config(config);
+
     exit(-1);
 }

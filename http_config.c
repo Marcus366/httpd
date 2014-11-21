@@ -12,7 +12,7 @@ http_reigster_config_directive(http_config *config, const char *name, config_han
 
     d->name    = strdup(name);
     d->handler = handler;
-    list_add_after(&d->list, &config->directives->list);
+    list_add_after(&d->list, &config->directives);
 }
 
 
@@ -22,8 +22,7 @@ http_create_config()
     http_config *conf = (http_config*)malloc(sizeof(http_config));
 
     conf->L = luaL_newstate();
-    conf->directives = malloc(sizeof(http_config_directive));
-    list_init(&conf->directives->list);
+    list_init(&conf->directives);
     //luaL_openlibs(conf->L);
 
     return conf;
@@ -31,13 +30,34 @@ http_create_config()
 
 
 void
+http_free_config(http_config *config)
+{
+    listnode *prev, *node;
+    http_config_directive *d;
+
+    node = config->directives.next;
+    while (node != &config->directives) {
+        prev = node;
+        node = node->next;
+        d = (http_config_directive*)container_of(prev, http_config_directive, list);
+
+        free((void*)d->name);
+        free(d);
+    }
+
+    lua_close(config->L);
+    free(config);
+}
+
+void
 http_load_config(http_config *config, const char *filename)
 {
     int err;
-    listnode *list = config->directives->list.next;
+    listnode *list = config->directives.next;
 
-    while (list != &config->directives->list) {
-        http_config_directive *d = container_of(list, http_config_directive, list);
+    while (list != &config->directives) {
+        http_config_directive *d =
+            (http_config_directive*)container_of(list, http_config_directive, list);
         lua_register(config->L, d->name, d->handler);
         list = list->next;
     } 
@@ -59,3 +79,4 @@ http_reload_config(http_config *config, const char *filename)
         exit(EXIT_FAILURE);
     }
 }
+
