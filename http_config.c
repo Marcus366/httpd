@@ -32,16 +32,15 @@ http_create_config()
 void
 http_free_config(http_config *config)
 {
-    listnode *prev, *node;
+    listnode *node;
     http_config_directive *d;
 
     node = config->directives.next;
     while (node != &config->directives) {
-        prev = node;
+        d = (http_config_directive*)container_of(node, http_config_directive, list);
         node = node->next;
-        d = (http_config_directive*)container_of(prev, http_config_directive, list);
 
-        free((void*)d->name);
+        free(d->name);
         free(d);
     }
 

@@ -18,7 +18,7 @@ typedef lua_CFunction config_handler;
 
 
 typedef struct http_config_directive {
-    const char     *name;
+    char           *name;
     config_handler  handler;
     listnode        list;
 } http_config_directive;
