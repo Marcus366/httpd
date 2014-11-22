@@ -3,21 +3,24 @@
 
 #include <sys/time.h>
 
-struct http_srv {
+
+typedef struct http_server {
     int listenfd;
     int epollfd;
 
     struct timeval now;
-};
+} http_server_t;
+
 
 /*
  * Create a http server and listen the given port.
  */
-struct http_srv* new_http_srv(int port);
+http_server_t* new_http_server(int listenfd);
 
 /*
  * This function are assumed never returned.
  */
-void serve(struct http_srv* svc);
+void serve(http_server_t* svc);
 
 #endif
+

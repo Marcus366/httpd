@@ -1,7 +1,8 @@
 CC=gcc
-CFLAG=-Wall -std=gnu99 -O2
+CFLAG=-Wall -std=gnu99 -g
 OBJS=httpd.o								\
-			http_srv.o						\
+			http_listen_socket.o	\
+			http_server.o					\
 			http_connection.o			\
 			http_request.o				\
 			http_res.o						\
@@ -10,10 +11,11 @@ OBJS=httpd.o								\
 			http_config.o					\
 			http_fcache.o					\
 			http_header.o					\
+			http_event.o					\
 			http_mem.o
 
 INSTALL=install
-INSTALL_FLAGS=-c -m 755 
+INSTALL_FLAGS=-c -m 755
 
 .PHONY: all
 
@@ -32,7 +34,7 @@ install: httpd
 	$(INSTALL) $(INSTALL_FLAGS) httpd /usr/local/bin/
 	test -d /etc/httpd || mkdir /etc/httpd
 	cp httpd.conf /etc/httpd/httpd.conf
-	touch /etc/httpd/httpd.pid && chmod 622 /etc/httpd/httpd.pid
+	touch /etc/httpd/httpd.pid && chmod 644 /etc/httpd/httpd.pid
 
 all: httpd run clean
 
