@@ -1,6 +1,6 @@
-CC =gcc
-CFLAG =-Wall -std=gnu99 -O2
-OBJS =httpd.o								\
+CC=gcc
+CFLAG=-Wall -std=gnu99 -O2
+OBJS=httpd.o								\
 			http_srv.o						\
 			http_connection.o			\
 			http_request.o				\
@@ -12,13 +12,11 @@ OBJS =httpd.o								\
 			http_header.o					\
 			http_mem.o
 
-.PHONY: all httpd_debug
+INSTALL=install
+INSTALL_FLAGS=-c -m 755 
 
-run: httpd
-	sudo ./httpd
+.PHONY: all
 
-debug: $(OBJS)
-	sudo sh debug.sh
 
 %.o:%.c %.h
 	$(CC) $(CFLAG) -c $< -o $@
@@ -29,6 +27,12 @@ httpd: $(OBJS)
 clean:
 	rm *.o
 	rm httpd
+
+install: httpd
+	$(INSTALL) $(INSTALL_FLAGS) httpd /usr/local/bin/
+	test -d /etc/httpd || mkdir /etc/httpd
+	cp httpd.conf /etc/httpd/httpd.conf
+	touch /etc/httpd/httpd.pid && chmod 622 /etc/httpd/httpd.pid
 
 all: httpd run clean
 

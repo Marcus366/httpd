@@ -37,7 +37,7 @@ main(int argc, char** argv)
 
     for (i = 1; i < argc; ++i) {
         if (strcmp("-r", argv[i]) == 0) {
-            if ((file = fopen("logs/httpd.pid", "r")) == NULL) {
+            if ((file = fopen("/etc/httpd/httpd.pid", "r")) == NULL) {
                 LOG_ERROR("open httpd.pid: %s", strerror(errno));
                 exit(EXIT_FAILURE);
             }
@@ -70,7 +70,7 @@ main(int argc, char** argv)
     LOG_VERBOSE("%d", port);
 
     pid = getpid();
-    if ((file = fopen("logs/httpd.pid", "w")) == NULL) {
+    if ((file = fopen("/etc/httpd/httpd.pid", "w")) == NULL) {
         LOG_ERROR("open httpd.pid: %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
