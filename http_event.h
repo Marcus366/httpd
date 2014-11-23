@@ -45,6 +45,8 @@ int http_event_dispatcher_add_event(http_event_dispatcher_t *dispatcher,
     http_event_t *event);
 int http_event_dispatcher_del_event(http_event_dispatcher_t *dispatcher,
     http_event_t *event);
+int http_event_dispatcher_mod_event(http_event_dispatcher_t *dispatcher,
+    http_event_t *event);
 
 int http_event_dispatcher_poll(http_event_dispatcher_t *dispatcher);
 

@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <sys/epoll.h>
 
 #include "httpd.h"
@@ -15,6 +16,7 @@
 #include "http_event.h"
 #include "http_server.h"
 #include "http_config.h"
+#include "http_fcache.h"
 #include "http_connection.h"
 
 
@@ -89,7 +91,7 @@ main(int argc, char** argv)
     }
     */
 
-    for (i = 0; i < 4; ++i) {
+    for (i = 0; i < 0; ++i) {
         pid = fork();
         if (pid < 0) {
             LOG_ERROR("fork error");
@@ -98,7 +100,8 @@ main(int argc, char** argv)
         }
     }
 
-    http__start_master_loop(looper);
+    http__start_worker_loop(looper);
+    //http__start_master_loop(looper);
 
     /* Never return. */
     /* Make valgrind happy. */
@@ -209,6 +212,23 @@ http__socket_init(http_looper_t *looper)
     looper->listening->port = 80;
     looper->listening->fd = listenfd;
     looper->listening->next = NULL;
+    int fl = fcntl(listenfd, F_GETFL);
+    if (fl == -1) {
+        perror("getfl");
+        close(listenfd);
+        return -1;
+    }
+    if (fcntl(listenfd, F_SETFL, fl | O_NONBLOCK) == -1) {
+        perror("setfl");
+        close(listenfd);
+        return -1;
+    }
+
+    /*
+     * FIXME:
+     * I don't know where to gracefully place the file cache.
+     */
+    fcache = http_fcache_create(10);
 
     return 0;
 }
@@ -243,6 +263,8 @@ http__start_worker_loop(http_looper_t *looper)
         event = http_event_create(listening->fd, HTTP_EVENT_IN,
             (http_event_data_t)listening, (http_event_handler_t)http__accept);
         http_event_dispatcher_add_event(looper->dispatcher, event);
+
+        listening = listening->next;
     }
 
     http_event_dispatcher_poll(looper->dispatcher);
@@ -253,12 +275,14 @@ void
 http__accept(http_event_t *ev)
 {
     int connfd;
-    socklen_t conn_len = 0;
+    socklen_t conn_len;
     struct sockaddr_in conn_addr;
     http_event_t *event;
     http_connection_t *conn;
-    http_listen_socket_t *listening = (http_listen_socket_t*)ev->data;
+    http_listen_socket_t *listening;
 
+    conn_len = 0;
+    listening = (http_listen_socket_t*)ev->data;
     for (;;) {
         memset(&conn_addr, 0, sizeof(conn_addr));
         conn_len = sizeof(conn_addr);
@@ -299,7 +323,6 @@ void
 http__read(http_event_t *ev)
 {
     int connfd;
-    http_event_t *event;
     http_connection_t *conn;
 
     conn = (http_connection_t*)ev->data;
@@ -313,10 +336,9 @@ http__read(http_event_t *ev)
     if (http_parse_request(conn->req)) {
         LOG_DEBUG("parse request: method:%s uri:%s version:%s",
                 conn->req->method.base, conn->req->uri.base, conn->req->version.base);
-        event = http_event_create(connfd, HTTP_EVENT_OUT | HTTP_EVENT_ET,
-            (http_event_data_t)conn, (http_event_handler_t)http__write);
-        http_event_dispatcher_add_event(ev->dispatcher, event);
-        http_event_dispatcher_del_event(ev->dispatcher, ev);
+        ev->type = HTTP_EVENT_OUT | HTTP_EVENT_ET;
+        ev->handler = http__write;
+        http_event_dispatcher_mod_event(ev->dispatcher, ev);
         conn->state = CONN_WRITE;
     }
 

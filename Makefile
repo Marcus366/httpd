@@ -33,7 +33,7 @@ clean:
 install: httpd
 	$(INSTALL) $(INSTALL_FLAGS) httpd /usr/local/bin/
 	test -d /etc/httpd || mkdir /etc/httpd
-	cp httpd.conf /etc/httpd/httpd.conf
+	cp config/httpd.conf /etc/httpd/httpd.conf
 	touch /etc/httpd/httpd.pid && chmod 644 /etc/httpd/httpd.pid
 
 all: httpd run clean

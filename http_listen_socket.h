@@ -14,7 +14,5 @@ struct http_listen_socket {
 };
 
 
-
-
 #endif
 

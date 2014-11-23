@@ -84,7 +84,7 @@ http_parse_request(http_request_t *req)
         mem = http_mem_create(req->read_buf + req->check_idx,
             req->read_idx - req->check_idx);
         token = http_mem_cut(mem, http_mem_create(CRLF, 2));
-        if (token.base == NULL) {
+        if (http_mem_is_null(token) || ret != 0) {
             break;
         }
 

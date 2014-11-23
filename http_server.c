@@ -23,11 +23,6 @@ new_http_server(int listenfd)
     gettimeofday(&svc->now, NULL);
     http_timer_init();
 
-    /*
-     * FIXME:
-     * I don't know where to gracefully place the file cache.
-     */
-    fcache = http_fcache_create(10);
 
     return svc;
 }

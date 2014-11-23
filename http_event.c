@@ -82,6 +82,25 @@ http_event_dispatcher_del_event(http_event_dispatcher_t *dispatcher,
 
 
 int
+http_event_dispatcher_mod_event(http_event_dispatcher_t *dispatcher,
+    http_event_t *event)
+{
+    int epollfd;
+    struct epoll_event ev;
+
+    epollfd = dispatcher->epollfd;
+    ev.data.ptr = event;
+    ev.events = event->type;
+
+    if (epoll_ctl(epollfd, EPOLL_CTL_MOD, event->fd, &ev) == -1) {
+        return -1;
+    }
+
+    return 0;
+}
+
+
+int
 http_event_dispatcher_poll(http_event_dispatcher_t *dispatcher)
 {
     http_event_t *event;
@@ -90,12 +109,14 @@ http_event_dispatcher_poll(http_event_dispatcher_t *dispatcher)
 
     epollfd = dispatcher->epollfd;
     
-    nfds = epoll_wait(epollfd, dispatcher->events, dispatcher->maxevents, -1);
-    for (i = 0; i < nfds; ++i) {
-        ev = dispatcher->events[i];
-        event = (http_event_t*)ev.data.ptr;
+    for (;;) {
+        nfds = epoll_wait(epollfd, dispatcher->events, dispatcher->maxevents, -1);
+        for (i = 0; i < nfds; ++i) {
+            ev = dispatcher->events[i];
+            event = (http_event_t*)ev.data.ptr;
 
-        event->handler(event);
+            event->handler(event);
+        }
     }
 
     return 0;
