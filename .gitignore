@@ -1,9 +1,5 @@
 *.o
 tags
-bootstrap-3.0.0
-logs
 container
 index.html
 httpd
-httpd.conf
-utils
