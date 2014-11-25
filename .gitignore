@@ -1,5 +1,2 @@
-*.o
+objs
 tags
-container
-index.html
-httpd

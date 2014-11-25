@@ -322,11 +322,9 @@ http__accept(http_event_t *ev)
 void
 http__read(http_event_t *ev)
 {
-    int connfd;
     http_connection_t *conn;
 
     conn = (http_connection_t*)ev->data;
-    connfd = conn->sockfd;
     if (conn->req == NULL) {
         conn->req = new_http_request(1024);
     }

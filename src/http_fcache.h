@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "container/hashtable.h"
+#include "hashtable.h"
 
 
 struct http_fcache_file {

@@ -5,7 +5,7 @@
 #include <lua.h>
 #include <lauxlib.h>
 #include "http_log.h"
-#include "container/list.h"
+#include "list.h"
 
 
 #define CONFIG_INTERFACE(ret_val, func_name) \
