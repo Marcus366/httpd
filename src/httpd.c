@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
+#include <sys/signalfd.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -24,15 +25,6 @@ CONFIG_VARIABLE(int, port);
 CONFIG_INTERFACE(void, set_port) {
     port = lua_tointeger(L, -1);
     lua_pop(L, 1);
-}
-
-static int http_sighup;
-static void http__sighup();
-
-void
-http__sighup(int signo) {
-    (void) signo;
-    http_sighup = 1;
 }
 
 
@@ -96,12 +88,12 @@ main(int argc, char** argv)
         if (pid < 0) {
             LOG_ERROR("fork error");
         } else if (pid == 0) {
-            http__start_worker_loop(looper);
+            //http__start_worker_loop(looper);
         }
     }
 
-    //http__start_worker_loop(looper);
-    http__start_master_loop(looper);
+    http__start_worker_loop(looper);
+    //http__start_master_loop(looper);
 
     /* Never return. */
     /* Make valgrind happy. */
@@ -146,17 +138,6 @@ http__arguments_init(int argc, char **argv)
 int
 http__signals_init()
 {
-    struct sigaction sa;
-
-    sa.sa_handler = http__sighup;
-    sigemptyset(&sa.sa_mask);
-    sigaddset(&sa.sa_mask, SIGHUP);
-    sa.sa_flags = 0;
-    if (sigaction(SIGHUP, &sa, NULL) < 0) {
-        LOG_ERROR("sigaction: %s", strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-
     return 0;
 }
 
@@ -203,7 +184,8 @@ http__socket_init(http_looper_t *looper)
         return -1;
     }
 
-    /* TODO:
+    /*
+     * TODO:
      * Here is not the final edtion code,
      * It should be listen all the port needed.
      */
@@ -237,11 +219,33 @@ http__socket_init(http_looper_t *looper)
 void
 http__start_master_loop(http_looper_t *looper)
 {
+    int sfd, pfd;
+    sigset_t mask;
+    ssize_t nread;
+    struct signalfd_siginfo fdsi;
+
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGHUP);
+
+    if (sigprocmask(SIG_BLOCK, &mask, NULL) == -1) {
+        LOG_ERROR("sigprocmask error");
+        exit(EXIT_FAILURE);
+    }
+
+    sfd = signalfd(-1, mask, 0);
+    if (sfd == -1) {
+        LOG_ERROR("signalfd error");
+        exit(EXIT_FAILURE);
+    }
+
     for(;;) {
-        if (http_sighup == 1) {
-            http_sighup = 0;
-            LOG_DEBUG("sighup");
-            http_reload_config(looper->config, "httpd.conf");
+        nread = read(sfd, &fdsi, sizeof(struct signalfd_siginfo));
+        if (nread != sizeof(struct signalfd_siginfo)) {
+            
+        }
+
+        if (fdsi.ssi_signo == SIGHUP) {
+            //reboot
         }
     }
 }
@@ -353,21 +357,18 @@ http__write(http_event_t *ev)
     conn = (http_connection_t*)ev->data;
     req  = conn->req;
 
-    if (req->major_state == BUILDING_RESPONSE) {
+    if (req->out_chain == NULL) {
         http_build_response(req);
     }
 
-    if (req->major_state == SENDING_RESPONSE) {
-        if (http_send_response(req) == 1) {
-            LOG_VERBOSE("SEND_FINISH");
-            SET_CONN_STATE(conn, CONN_WAIT_CLOSE);
-            http_event_dispatcher_del_event(ev->dispatcher, ev);
-            http_close_connection(conn);
-            //shutdown(conn->sockfd, SHUT_WR);
-            //http_timer_create(1e6, http_close_cb, conn, TIMER_ONCE);
-        }
+    if (http_send_response(req) == 1) {
+        LOG_VERBOSE("SEND_FINISH");
+        SET_CONN_STATE(conn, CONN_WAIT_CLOSE);
+        http_event_dispatcher_del_event(ev->dispatcher, ev);
+        http_close_connection(conn);
+        //shutdown(conn->sockfd, SHUT_WR);
+        //http_timer_create(1e6, http_close_cb, conn, TIMER_ONCE);
     }
-
     return ;
 }
 
