@@ -8,9 +8,11 @@
  * with different level and different color otherwise the MARCOS
  * will all become null operation.
  */
+//#define __DEBUG__
+
+#ifdef __DEBUG__
 
 
-/*
 #define LOG_VERBOSE(fmt, arg...)                             \
 do {                                                          \
     http_log(ll_verbose, "\033[;37m[%s:%d][%s] " fmt "\n\033[0m", \
@@ -40,7 +42,8 @@ do {                                                          \
     http_log(ll_error, "\033[;31m[%s:%d][%s] " fmt "\n\033[0m",   \
         __FILE__, __LINE__, __FUNCTION__, ##arg);             \
 } while(0)
-*/
+
+#else
 
 #define LOG_VERBOSE(fmt, arg...)
 #define LOG_DEBUG(fmt, arg...)
@@ -48,7 +51,7 @@ do {                                                          \
 #define LOG_WARN(fmt, arg...)
 #define LOG_ERROR(fmt, arg...)
 
-//#endif //__DEBUG__
+#endif //__DEBUG__
 
 #define LOG_BUFSIZE 1024
 

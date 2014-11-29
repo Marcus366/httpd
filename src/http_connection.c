@@ -27,7 +27,6 @@ new_http_connection(int sockfd)
         conn->sockfd = sockfd;
         conn->state  = CONN_READ;
         conn->req    = NULL;
-        conn->res    = NULL;
     }
     return conn;
 }
@@ -38,9 +37,6 @@ free_http_connection(http_connection_t* conn)
 {
     if (conn->req) {
         free_http_request(conn->req);
-    }
-    if (conn->res) {
-        free_http_res(conn->res);
     }
     free(conn);
 }

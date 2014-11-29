@@ -1,10 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
+#include <sys/uio.h>
+#include <sys/sendfile.h>
 
+#include "http_connection.h"
 #include "http_request.h"
 #include "http_log.h"
 #include "http_mem.h"
+#include "http_fcache.h"
+
 
 static int http_parse_request_line(http_request_t *req, http_mem_t mem);
 static int http_parse_request_head(http_request_t *req, http_mem_t mem);
@@ -12,17 +18,20 @@ static int http_parse_request_body(http_request_t *req, http_mem_t mem);
 
 
 http_request_t*
-new_http_request(size_t bufsize)
+new_http_request(http_connection_t *conn)
 {
     http_request_t *req = (http_request_t*)malloc(sizeof(http_request_t));
     if (req != NULL) {
-        req->major_state = PARSING_REQUEST_LINE;
-        req->read_buf    = (u_char*)malloc(bufsize);
-        req->buf_size    = bufsize;
-        req->read_idx    = 0;
-        req->check_idx   = 0;
+        req->conn        = conn;
 
-        req->http_headers = http_headers_new();
+        req->major_state = PARSING_REQUEST_LINE;
+        req->read_buf    = (u_char*)malloc(1024);
+        req->read_last   = req->read_buf + 1024;
+
+        req->read_pos = req->check_pos = req->read_buf;
+
+        req->headers_in  = http_headers_new();
+        req->headers_out = NULL;
     }
     return req;
 }
@@ -32,7 +41,7 @@ void
 free_http_request(http_request_t *req)
 {
     if (req != NULL) {
-        http_headers_free(req->http_headers);
+        http_headers_free(req->headers_in);
 
         free(req->read_buf);
         free(req);
@@ -46,8 +55,8 @@ http_recv_request(http_request_t *req, int sockfd)
     ssize_t cnt = 0;
 
     for (;;) {
-        ssize_t nread, free_size = req->buf_size - req->read_idx;
-        nread = read(sockfd, req->read_buf + req->read_idx, free_size);
+        ssize_t nread, free_size = req->read_last - req->read_pos;
+        nread = read(sockfd, req->read_pos, free_size);
         if (nread == -1) {
             if (errno == EINTR) {
                 continue;
@@ -59,13 +68,13 @@ http_recv_request(http_request_t *req, int sockfd)
             }
         }
         cnt += nread;
-        req->read_idx += nread;
+        req->read_pos += nread;
         if (nread < free_size) {
             break;
         }
-        if (req->read_idx == req->buf_size) {
-            req->buf_size = req->buf_size << 1;;
-            req->read_buf = (u_char*)realloc(req->read_buf, req->buf_size);
+        if (req->read_pos == req->read_last) {
+            req->read_buf = (u_char*)realloc(req->read_buf,
+                (req->read_last - req->read_buf) * 2);
         }
     }
     return cnt;
@@ -77,12 +86,11 @@ http_parse_request(http_request_t *req)
 {
     int ret = 0;
     http_mem_t token;
-    http_mem_t mem = http_mem_create(req->read_buf + req->check_idx,
-        req->read_idx - req->check_idx);
+    http_mem_t mem;
 
     do {
-        mem = http_mem_create(req->read_buf + req->check_idx,
-            req->read_idx - req->check_idx);
+        mem = http_mem_create(req->check_pos,
+            req->read_pos - req->check_pos);
         token = http_mem_cut(mem, http_mem_create(CRLF, 2));
         if (http_mem_is_null(token) || ret != 0) {
             break;
@@ -100,9 +108,13 @@ http_parse_request(http_request_t *req)
             break;
         }
 
-        req->check_idx += token.len;
-
+        req->check_pos += token.len;
     } while (1);
+
+    if (ret == 1) {
+        req->major_state = BUILDING_RESPONSE;
+    }
+
     return ret;
 }
 
@@ -110,9 +122,6 @@ http_parse_request(http_request_t *req)
 int
 http_parse_request_line(http_request_t *req, http_mem_t mem)
 {
-    LOG_DEBUG("parse request line");
-    http_mem_print(mem);
-
     req->method = http_mem_cut(mem, http_mem_create(SPACE, 1));
     if (http_mem_is_null(req->method)) {
         return -1;
@@ -121,7 +130,6 @@ http_parse_request_line(http_request_t *req, http_mem_t mem)
         mem.base += req->method.len;
         req->method.base[--req->method.len] = 0;
     }
-    http_mem_print(req->method);
 
     req->uri = http_mem_cut(mem, http_mem_create(SPACE, 1));
     if (http_mem_is_null(req->uri)) {
@@ -131,7 +139,6 @@ http_parse_request_line(http_request_t *req, http_mem_t mem)
         mem.base += req->uri.len;
         req->uri.base[--req->uri.len] = 0;
     }
-    http_mem_print(req->uri);
 
     req->version = http_mem_cut(mem, http_mem_create(CRLF, 2));
     if (http_mem_is_null(req->version)) {
@@ -140,7 +147,6 @@ http_parse_request_line(http_request_t *req, http_mem_t mem)
         req->version.len -= 2;
         req->version.base[req->version.len] = 0;
     }
-    http_mem_print(req->version);
 
     req->major_state = PARSING_REQUEST_HEAD;
 
@@ -151,8 +157,6 @@ http_parse_request_line(http_request_t *req, http_mem_t mem)
 int
 http_parse_request_head(http_request_t *req, http_mem_t mem)
 {
-    LOG_DEBUG("parse request head");
-    http_mem_print(mem);
     http_mem_t cut = http_mem_cut(mem, http_mem_create((u_char*)": ", 2));
 
     http_mem_t attr  = http_mem_create(mem.base, cut.len - 2);
@@ -166,7 +170,7 @@ http_parse_request_head(http_request_t *req, http_mem_t mem)
         return -1;
     }
 
-    http_header_set(req->http_headers, attr, value);
+    http_header_set(req->headers_in, attr, value);
 
     return 0;
 }
@@ -177,3 +181,137 @@ http_parse_request_body(http_request_t *req, http_mem_t mem)
 {
     return 0;
 }
+
+
+char *global_buf = (char*)"HTTP/1.1 200 OK\r\nServer: ZZPServer\r\nDate: Sat, 31 Dec 2014 23:59:59 GMT\r\nContent-Type: text/html\r\n";
+
+
+int
+http_build_response(http_request_t *req)
+{
+    struct http_fcache_file *file;
+    http_chain_t *chain;
+
+    file = http_fcache_getfile(fcache, (const char*)req->uri.base + 1);
+    if (file == NULL) {
+        if ((file = http_fcache_putfile(fcache, (const char*)req->uri.base + 1)) == NULL) {
+            return -1;
+        }
+    }
+
+    chain = (http_chain_t*)malloc(sizeof(http_chain_t));
+    chain->type = MEMORY_CHAIN;
+    chain->data.mem = http_mem_create((u_char*)global_buf, strlen(global_buf));
+    chain->offset.mem_off = 0;
+    req->out_chain = chain;
+
+    u_char *contentlen = (u_char*)malloc(64);
+    chain = (http_chain_t*)malloc(sizeof(http_chain_t));
+    sprintf((char*)contentlen, "Content-Length: %d\r\n\r\n", (int)file->stat.st_size);
+    chain->type = MEMORY_CHAIN;
+    chain->data.mem = http_mem_create(contentlen, strlen((char*)contentlen));
+    chain->offset.mem_off = 0;
+    req->out_chain->next = chain;
+
+    chain = (http_chain_t*)malloc(sizeof(http_chain_t));
+    chain->type = SENDFILE_CHAIN;
+    chain->data.sendfile.fd = file->fd;
+    chain->data.sendfile.size = file->stat.st_size;
+    chain->offset.file_off = 0;
+    chain->next = NULL;
+    req->out_chain->next->next = chain;
+    
+    req->major_state = SENDING_RESPONSE;
+
+    return 0;
+}
+
+
+int
+http_send_response(http_request_t *req)
+{
+    int sockfd;
+    http_chain_t *tmp, *chain;
+
+    sockfd = req->conn->sockfd;
+    chain = req->out_chain;
+
+sendloop:
+    if (chain == NULL) {
+        LOG_DEBUG("send all the msg");
+        return 1;
+    }
+
+    if (chain->type == SENDFILE_CHAIN) {
+        for (;;) {
+            ssize_t nwrite, rest;
+            rest = chain->data.sendfile.size - chain->offset.file_off;
+            nwrite = sendfile(sockfd, chain->data.sendfile.fd
+                , &chain->offset.file_off, rest);
+            LOG_DEBUG("offset:%d rest:%d have written:%d",
+                (int)chain->offset.file_off, (int)rest, (int)nwrite);
+            if (nwrite == -1) {
+                if (errno == EINTR) {
+                    continue;
+                } else if (errno == EAGAIN) {
+                    return 0;
+                } else {
+                    LOG_WARN("sendfile: %s", strerror(errno));
+                    return -1;
+                }
+            }
+
+            if (chain->offset.file_off == chain->data.sendfile.size) {
+                tmp = chain;
+                chain = chain->next;
+                free(tmp);
+                LOG_DEBUG("sendfile end");
+                goto sendloop;
+            }
+
+        }
+    } else if (chain->type == MEMORY_CHAIN) {
+        int cnt;
+        struct iovec iovec[64];
+        for (;;) {
+
+          cnt = 0;
+          tmp = chain;
+          while (tmp && tmp->type == MEMORY_CHAIN) {
+              iovec[cnt].iov_base = tmp->data.mem.base;
+              iovec[cnt].iov_len = tmp->data.mem.len;
+              ++cnt;
+              tmp = tmp->next;
+          }
+
+          if (cnt == 0) {
+              LOG_DEBUG("writev end");
+              goto sendloop;
+          }
+
+          ssize_t nwrite;
+          nwrite = writev(sockfd, iovec, cnt);
+          LOG_DEBUG("writev %dbytes", nwrite);
+          if (nwrite == -1) {
+              if (errno == EINTR) {
+                  continue;
+              } else if (errno == EAGAIN) {
+                  return 0;
+              } else {
+                  LOG_WARN("write: %s", strerror(errno));
+                  return -1;
+              }
+          }
+
+          while ((uint64_t)nwrite >= chain->data.mem.len) {
+              tmp = chain;
+              chain = chain->next;
+              free(tmp);
+          }
+
+        }
+    }
+
+    return 0;
+}
+

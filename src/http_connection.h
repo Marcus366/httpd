@@ -24,7 +24,6 @@ typedef struct http_connection {
     int              sockfd;
     enum conn_state  state;
     http_request_t  *req;
-    struct http_res *res;
 } http_connection_t;
 
 #define SET_CONN_STATE(conn, newstate) do { conn->state = newstate; } while (0);

@@ -1,6 +1,11 @@
 #ifndef __HTTP_MEM_H__
 #define __HTTP_MEM_H__
 
+/*
+ * http_mem_t is a struct standing for a area of memory.
+ * It is a lightweight struct so it usually copied by value.
+ */
+
 #include <stdint.h>
 #include <sys/types.h>
 

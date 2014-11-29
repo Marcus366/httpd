@@ -12,12 +12,12 @@
 
 #include "httpd.h"
 #include "http_log.h"
-#include "http_res.h"
 #include "http_event.h"
 #include "http_server.h"
 #include "http_config.h"
 #include "http_fcache.h"
 #include "http_connection.h"
+#include "http_request.h"
 
 
 CONFIG_VARIABLE(int, port);
@@ -100,8 +100,8 @@ main(int argc, char** argv)
         }
     }
 
-    http__start_worker_loop(looper);
-    //http__start_master_loop(looper);
+    //http__start_worker_loop(looper);
+    http__start_master_loop(looper);
 
     /* Never return. */
     /* Make valgrind happy. */
@@ -326,7 +326,7 @@ http__read(http_event_t *ev)
 
     conn = (http_connection_t*)ev->data;
     if (conn->req == NULL) {
-        conn->req = new_http_request(1024);
+        conn->req = new_http_request(conn);
     }
 
     http_recv_request(conn->req, conn->sockfd);
@@ -348,23 +348,26 @@ void
 http__write(http_event_t *ev)
 {
     http_connection_t *conn;
+    http_request_t *req;
 
     conn = (http_connection_t*)ev->data;
-    if (conn->res == NULL) {
-        conn->res = new_http_res();
-        if (http_gen_res(conn->res, conn->req) == -1) {
+    req  = conn->req;
+
+    if (req->major_state == BUILDING_RESPONSE) {
+        http_build_response(req);
+    }
+
+    if (req->major_state == SENDING_RESPONSE) {
+        if (http_send_response(req) == 1) {
+            LOG_VERBOSE("SEND_FINISH");
+            SET_CONN_STATE(conn, CONN_WAIT_CLOSE);
+            http_event_dispatcher_del_event(ev->dispatcher, ev);
             http_close_connection(conn);
-            return ;
+            //shutdown(conn->sockfd, SHUT_WR);
+            //http_timer_create(1e6, http_close_cb, conn, TIMER_ONCE);
         }
     }
 
-    if (http_send_res(conn->res, conn->sockfd) == SEND_FINISH) {
-        LOG_VERBOSE("SEND_FINISH");
-        SET_CONN_STATE(conn, CONN_WAIT_CLOSE);
-        http_close_connection(conn);
-        //shutdown(conn->sockfd, SHUT_WR);
-        //http_timer_create(1e6, http_close_cb, conn, TIMER_ONCE);
-    }
     return ;
 }
 

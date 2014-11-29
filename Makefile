@@ -4,15 +4,14 @@ SRC_PATH=src
 OBJS_PATH=objs
 OBJS=$(OBJS_PATH)/httpd.o								\
 			$(OBJS_PATH)/http_listen_socket.o	\
-			$(OBJS_PATH)/http_server.o					\
-			$(OBJS_PATH)/http_connection.o			\
+			$(OBJS_PATH)/http_server.o				\
+			$(OBJS_PATH)/http_connection.o		\
 			$(OBJS_PATH)/http_request.o				\
-			$(OBJS_PATH)/http_res.o						\
 			$(OBJS_PATH)/http_timer.o					\
 			$(OBJS_PATH)/http_log.o						\
-			$(OBJS_PATH)/http_config.o					\
-			$(OBJS_PATH)/http_fcache.o					\
-			$(OBJS_PATH)/http_header.o					\
+			$(OBJS_PATH)/http_config.o				\
+			$(OBJS_PATH)/http_fcache.o				\
+			$(OBJS_PATH)/http_header.o				\
 			$(OBJS_PATH)/http_event.o					\
 			$(OBJS_PATH)/http_mem.o
 
@@ -25,14 +24,14 @@ httpd:
 	test -d objs || mkdir objs
 	make $(OBJS_PATH)/httpd
 
-$(OBJS_PATH)/%.o:$(SRC_PATH)/%.c $(SRC_PATH)/%.h
+$(OBJS_PATH)/%.o:$(SRC_PATH)/%.c $(SRC_PATH)/%.h $(SRC_PATH)/http_log.h
 	$(CC) $(CFLAG) -c $< -o $@
 
 $(OBJS_PATH)/httpd: $(OBJS)
 	$(CC) $(CFLAG) $(OBJS) -llua -lm -o $@
 
 clean:
-	rm *.o
+	rm -rf objs/*.o
 	rm objs/httpd
 
 install: $(OBJS_PATH)/httpd
