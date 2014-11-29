@@ -14,6 +14,9 @@
 #define CRLF  ((u_char*)"\r\n")
 #define SPACE ((u_char*)" ")
 
+#define HTTP_BAD_REQUEST  400
+#define HTTP_UNAUTHORIZED 401
+
 #define METHOD_UNSET   -1
 #define METHOD_OPTIONS  0
 #define METHOD_GET      1
@@ -22,6 +25,11 @@
 #define METHOD_DELETE   4
 #define METHOD_TRACE    5
 #define METHOD_CONNECT  6
+
+#define VERSION_UNSET -1
+#define VERSION_09     0
+#define VERSION_10     1
+#define VERSION_11     2
 
 #define PARSING_REQUEST_LINE  0
 #define PARSING_REQUEST_HEAD  1
@@ -49,6 +57,9 @@ typedef struct http_request {
 
     http_headers_t    *headers_in;
     http_headers_t    *headers_out;
+
+    int                method_id;
+    int                version_id;
 
     http_mem_t         method;
     http_mem_t         uri;

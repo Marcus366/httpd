@@ -16,6 +16,10 @@ static int http_parse_request_line(http_request_t *req, http_mem_t mem);
 static int http_parse_request_head(http_request_t *req, http_mem_t mem);
 static int http_parse_request_body(http_request_t *req, http_mem_t mem);
 
+static int http_parse_request_method(http_request_t *req, http_mem_t mem);
+static int http_parse_request_uri(http_request_t *req, http_mem_t mem);
+static int http_parse_request_version(http_request_t *req, http_mem_t mem);
+
 
 http_request_t*
 new_http_request(http_connection_t *conn)
@@ -32,6 +36,9 @@ new_http_request(http_connection_t *conn)
 
         req->headers_in  = http_headers_new();
         req->headers_out = NULL;
+
+        req->method_id  = METHOD_UNSET;
+        req->version_id = VERSION_UNSET;
     }
     return req;
 }
@@ -85,8 +92,7 @@ int
 http_parse_request(http_request_t *req)
 {
     int ret = 0;
-    http_mem_t token;
-    http_mem_t mem;
+    http_mem_t mem, token;
 
     do {
         mem = http_mem_create(req->check_pos,
@@ -122,6 +128,8 @@ http_parse_request(http_request_t *req)
 int
 http_parse_request_line(http_request_t *req, http_mem_t mem)
 {
+    int ret = 0;
+
     req->method = http_mem_cut(mem, http_mem_create(SPACE, 1));
     if (http_mem_is_null(req->method)) {
         return -1;
@@ -129,6 +137,9 @@ http_parse_request_line(http_request_t *req, http_mem_t mem)
         mem.len  -= req->method.len;
         mem.base += req->method.len;
         req->method.base[--req->method.len] = 0;
+        if ((ret = http_parse_request_method(req, req->method)) != 0) {
+            return ret;
+        }
     }
 
     req->uri = http_mem_cut(mem, http_mem_create(SPACE, 1));
@@ -146,11 +157,75 @@ http_parse_request_line(http_request_t *req, http_mem_t mem)
     } else {
         req->version.len -= 2;
         req->version.base[req->version.len] = 0;
+        if ((ret = http_parse_request_version(req, req->version)) != 0) {
+            return ret;
+        }
     }
 
     req->major_state = PARSING_REQUEST_HEAD;
 
-    return 0;
+    return ret;
+}
+
+
+int
+http_parse_request_method(http_request_t *req, http_mem_t mem)
+{
+    struct method {
+        const char *name;
+        size_t      len;
+    };
+
+    static struct method methods[] = {
+        { "OPTIONS", 7 },
+        { "GET"    , 3 },
+        { "POST"   , 4 },
+        { "PUT"    , 3 },
+        { "DELETE" , 6 },
+        { "TRACE"  , 5 },
+        { "CONNECT", 7 }
+    };
+
+    int i;
+    int size = sizeof(methods) / sizeof(struct method);
+    for (i = 0; i < size; ++i) {
+        if (strncmp((char*)mem.base, methods[i].name, methods[i].len) == 0) {
+            req->method_id = i;
+            break;
+        }
+    }
+
+    if (req->method_id == METHOD_UNSET) {
+        return HTTP_BAD_REQUEST;
+    } else {
+        return 0;
+    }
+}
+
+
+int
+http_parse_request_version(http_request_t *req, http_mem_t mem)
+{
+    static const char *version_names[] = {
+        "HTTP/0.9",
+        "HTTP/1.0",
+        "HTTP/1.1"
+    };
+
+    int i;
+    int size = sizeof(version_names[i]) / sizeof(const char*);
+    for (i = 0; i < size; ++i) {
+        if (strncmp((char*)mem.base, version_names[i], 8) == 0) {
+            req->version_id = i;
+            break;
+        }
+    }
+
+    if (req->version_id == VERSION_UNSET) {
+        return HTTP_BAD_REQUEST;
+    } else {
+        return 0;
+    }
 }
 
 
