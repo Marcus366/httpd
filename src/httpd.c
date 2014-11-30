@@ -1,24 +1,16 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <errno.h>
 #include <signal.h>
-#include <sys/signalfd.h>
 #include <fcntl.h>
-#include <sys/types.h>
+#include <sys/signalfd.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/epoll.h>
 
 #include "httpd.h"
 #include "http_log.h"
 #include "http_event.h"
-#include "http_server.h"
 #include "http_config.h"
 #include "http_fcache.h"
 #include "http_connection.h"
-#include "http_request.h"
 
 
 CONFIG_VARIABLE(int, port);
@@ -40,6 +32,7 @@ static void http__accept(http_event_t *ev);
 static void http__read(http_event_t *ev);
 static void http__write(http_event_t *ev);
 
+static void http__close_listen_socket(http_listen_socket_t *socket);
 
 int
 main(int argc, char** argv)
@@ -88,12 +81,15 @@ main(int argc, char** argv)
         if (pid < 0) {
             LOG_ERROR("fork error");
         } else if (pid == 0) {
-            //http__start_worker_loop(looper);
+            http__start_worker_loop(looper);
+            /* Child process never return. */
+            LOG_ERROR("child process return");
+            exit(EXIT_FAILURE);
         }
     }
 
-    http__start_worker_loop(looper);
-    //http__start_master_loop(looper);
+    //http__start_worker_loop(looper);
+    http__start_master_loop(looper);
 
     /* Never return. */
     /* Make valgrind happy. */
@@ -219,10 +215,12 @@ http__socket_init(http_looper_t *looper)
 void
 http__start_master_loop(http_looper_t *looper)
 {
-    int sfd, pfd;
+    int sfd;
     sigset_t mask;
     ssize_t nread;
     struct signalfd_siginfo fdsi;
+
+    http__close_listen_socket(looper->listening);
 
     sigemptyset(&mask);
     sigaddset(&mask, SIGHUP);
@@ -232,7 +230,7 @@ http__start_master_loop(http_looper_t *looper)
         exit(EXIT_FAILURE);
     }
 
-    sfd = signalfd(-1, mask, 0);
+    sfd = signalfd(-1, &mask, 0);
     if (sfd == -1) {
         LOG_ERROR("signalfd error");
         exit(EXIT_FAILURE);
@@ -370,5 +368,19 @@ http__write(http_event_t *ev)
         //http_timer_create(1e6, http_close_cb, conn, TIMER_ONCE);
     }
     return ;
+}
+
+
+void
+http__close_listen_socket(http_listen_socket_t *socket)
+{
+    http_listen_socket_t *tmp;
+
+    while (socket) {
+        tmp = socket;
+        close(socket->fd);
+        socket = socket->next;
+        free(tmp);
+    }
 }
 
