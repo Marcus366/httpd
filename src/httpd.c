@@ -2,8 +2,10 @@
 #include <errno.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <sys/socket.h>
 #include <sys/signalfd.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "httpd.h"
 #include "http_log.h"
@@ -262,7 +264,7 @@ http__start_worker_loop(http_looper_t *looper)
 
     listening = looper->listening;
     while (listening != NULL) {
-        event = http_event_create(listening->fd, HTTP_EVENT_IN,
+        event = http_event_create(listening->fd, HTTP_EVENT_IN | HTTP_EVENT_ET,
             (http_event_data_t)listening, (http_event_handler_t)http__accept);
         http_event_dispatcher_add_event(looper->dispatcher, event);
 
@@ -354,6 +356,8 @@ http__write(http_event_t *ev)
 
     conn = (http_connection_t*)ev->data;
     req  = conn->req;
+
+    LOG_VERBOSE("write %ld", conn->sockfd);
 
     if (req->major_state == BUILDING_RESPONSE) {
         http_build_response(req);

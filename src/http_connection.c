@@ -10,7 +10,6 @@
 #include "http_server.h"
 #include "http_connection.h"
 #include "http_request.h"
-#include "http_res.h"
 #include "http_timer.h"
 #include "http_log.h"
 

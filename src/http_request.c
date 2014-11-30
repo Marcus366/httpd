@@ -213,7 +213,7 @@ http_parse_request_version(http_request_t *req, http_mem_t mem)
     };
 
     int i;
-    int size = sizeof(version_names[i]) / sizeof(const char*);
+    int size = sizeof(version_names) / sizeof(const char*);
     for (i = 0; i < size; ++i) {
         if (strncmp((char*)mem.base, version_names[i], 8) == 0) {
             req->version_id = i;
@@ -366,7 +366,7 @@ sendloop:
 
           ssize_t nwrite;
           nwrite = writev(sockfd, iovec, cnt);
-          LOG_DEBUG("writev %dbytes", nwrite);
+          LOG_DEBUG("writev %d bytes", nwrite);
           if (nwrite == -1) {
               if (errno == EINTR) {
                   continue;
@@ -378,7 +378,9 @@ sendloop:
               }
           }
 
-          while ((uint64_t)nwrite >= chain->data.mem.len) {
+          while (nwrite && (uint64_t)nwrite >= chain->data.mem.len) {
+              nwrite -= (ssize_t)chain->data.mem.len;
+
               tmp = chain;
               chain = chain->next;
               free(tmp);
