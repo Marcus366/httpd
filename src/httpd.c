@@ -78,7 +78,7 @@ main(int argc, char** argv)
     }
     */
 
-    for (i = 0; i < 0; ++i) {
+    for (i = 0; i < 4; ++i) {
         pid = fork();
         if (pid < 0) {
             LOG_ERROR("fork error");
@@ -90,8 +90,8 @@ main(int argc, char** argv)
         }
     }
 
-    http__start_worker_loop(looper);
-    //http__start_master_loop(looper);
+    //http__start_worker_loop(looper);
+    http__start_master_loop(looper);
 
     /* Never return. */
     /* Make valgrind happy. */

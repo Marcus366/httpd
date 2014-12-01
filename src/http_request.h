@@ -3,9 +3,10 @@
 
 
 #include <unistd.h>
-#include "http_header.h"
 #include "http_mem.h"
 #include "http_chain.h"
+#include "http_header.h"
+#include "http_mempool.h"
 
 
 #define CR    '\r'
@@ -16,6 +17,7 @@
 
 #define HTTP_BAD_REQUEST  400
 #define HTTP_UNAUTHORIZED 401
+
 
 #define METHOD_UNSET   -1
 #define METHOD_OPTIONS  0
@@ -64,6 +66,8 @@ typedef struct http_request {
     http_mem_t         method;
     http_mem_t         uri;
     http_mem_t         version;
+
+    http_mempool_t    *pool;
 } http_request_t;
 
 

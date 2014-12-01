@@ -5,11 +5,10 @@
 #include <sys/uio.h>
 #include <sys/sendfile.h>
 
-#include "http_connection.h"
-#include "http_request.h"
 #include "http_log.h"
-#include "http_mem.h"
 #include "http_fcache.h"
+#include "http_request.h"
+#include "http_connection.h"
 
 
 static int http_parse_request_line(http_request_t *req, http_mem_t mem);
@@ -27,9 +26,10 @@ new_http_request(http_connection_t *conn)
     http_request_t *req = (http_request_t*)malloc(sizeof(http_request_t));
     if (req != NULL) {
         req->conn        = conn;
+        req->pool        = http_mempool_create();
 
         req->major_state = PARSING_REQUEST_LINE;
-        req->read_buf    = (u_char*)malloc(1024);
+        req->read_buf    = (u_char*)http_mempool_alloc(req->pool, 1024);
         req->read_last   = req->read_buf + 1024;
 
         req->read_pos = req->check_pos = req->read_buf;
@@ -39,6 +39,7 @@ new_http_request(http_connection_t *conn)
 
         req->method_id  = METHOD_UNSET;
         req->version_id = VERSION_UNSET;
+
     }
     return req;
 }
@@ -49,8 +50,8 @@ free_http_request(http_request_t *req)
 {
     if (req != NULL) {
         http_headers_free(req->headers_in);
+        http_mempool_free(req->pool);
 
-        free(req->read_buf);
         free(req);
     }
 }
@@ -280,7 +281,7 @@ http_build_response(http_request_t *req)
     chain->offset.mem_off = 0;
     req->out_chain = chain;
 
-    u_char *contentlen = (u_char*)malloc(64);
+    u_char *contentlen = (u_char*)http_mempool_alloc(req->pool, 64);
     chain = (http_chain_t*)malloc(sizeof(http_chain_t));
     sprintf((char*)contentlen, "Content-Length: %d\r\n\r\n", (int)file->stat.st_size);
     chain->type = MEMORY_CHAIN;
