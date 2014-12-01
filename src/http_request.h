@@ -19,6 +19,7 @@
 #define HTTP_UNAUTHORIZED 401
 
 
+/* Following are HTTP method id */
 #define METHOD_UNSET   -1
 #define METHOD_OPTIONS  0
 #define METHOD_GET      1
@@ -28,11 +29,13 @@
 #define METHOD_TRACE    5
 #define METHOD_CONNECT  6
 
+/* Following are HTTP version id */
 #define VERSION_UNSET -1
 #define VERSION_09     0
 #define VERSION_10     1
 #define VERSION_11     2
 
+/* Following are HTTP parse state */
 #define PARSING_REQUEST_LINE  0
 #define PARSING_REQUEST_HEAD  1
 #define PARSING_REQUEST_BODY  2
