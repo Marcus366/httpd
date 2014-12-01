@@ -13,13 +13,14 @@ struct http_mempool {
 };
 
 
-http_mempool_t* http_mempool_create();
+http_mempool_t* http_mempool_create(size_t size);
 
 
 void http_mempool_free(http_mempool_t *pool);
 
 
-void* http_mempool_alloc(http_mempool_t *poll, size_t size);
+void* http_mempool_alloc(http_mempool_t *pool, size_t size);
+void* http_mempool_alloc(http_mempool_t *pool, void *ptr, size_t size);
 
 
 #endif

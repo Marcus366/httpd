@@ -81,8 +81,15 @@ http_recv_request(http_request_t *req, int sockfd)
             break;
         }
         if (req->read_pos == req->read_last) {
-            req->read_buf = (u_char*)realloc(req->read_buf,
-                (req->read_last - req->read_buf) * 2);
+            /* TODO:
+             * http_mempool don't support realloc now.
+             * As I think, it don't just a realloc problem.
+             * The mempool use a simple way to manage memory,
+             * so realloc is very expensive.
+             * We should seriously make out a good decision here.
+             */
+            //req->read_buf = (u_char*)realloc(req->read_buf,
+            //    (req->read_last - req->read_buf) * 2);
         }
     }
     return cnt;

@@ -6,9 +6,9 @@
 
 
 http_mempool_t*
-http_mempool_create()
+http_mempool_create(size_t size)
 {
-    http_mempool_t *pool = (http_mempool_t*)malloc(POOL_SIZE);
+    http_mempool_t *pool = (http_mempool_t*)malloc(size);
 
     if (pool == NULL) {
         return NULL;
@@ -17,7 +17,7 @@ http_mempool_create()
     pool->next = NULL;
 
     pool->pos = (u_char*)pool + sizeof(http_mempool_t);
-    pool->last = (u_char*)pool + POOL_SIZE;
+    pool->last = (u_char*)pool + size;
 
     return pool;
 }
@@ -52,7 +52,7 @@ http_mempool_alloc(http_mempool_t *pool, size_t size)
         }
     }
 
-    p = http_mempool_create();
+    p = http_mempool_create(size > POOL_SIZE ? size : POOL_SIZE);
     if (p == NULL) {
         return NULL;
     }
