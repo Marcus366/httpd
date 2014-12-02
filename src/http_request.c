@@ -88,9 +88,9 @@ http_recv_request(http_request_t *req, int sockfd)
         if (req->read_pos == req->read_last) {
             /* TODO:
              * http_mempool don't support realloc now.
-             * As I think, it don't just a realloc problem.
+             * It does not just a realloc problem.
              * The mempool use a simple way to manage memory,
-             * so realloc is very expensive.
+             * so the cost of realloc is very expensive.
              * We should seriously make out a good decision here.
              */
             //req->read_buf = (u_char*)realloc(req->read_buf,
@@ -306,18 +306,21 @@ http_build_response(http_request_t *req)
     http_header_t *header;
     struct http_fcache_file *file;
 
-    file = http_fcache_getfile(fcache, (const char*)req->uri.base + 1);
-    if (file == NULL) {
-        if ((file = http_fcache_putfile(fcache, (const char*)req->uri.base + 1)) == NULL) {
-            return -1;
+    if (req->method_id == METHOD_GET) {
+        file = http_fcache_getfile(fcache, (const char*)req->uri.base + 1);
+        if (file == NULL) {
+            if ((file = http_fcache_putfile(fcache, (const char*)req->uri.base + 1)) == NULL) {
+                return -1;
+            }
         }
-    }
+      
 
-    u_char *contentlen = (u_char*)http_mempool_alloc(req->pool, 64);
-    sprintf((char*)contentlen, "%d", (int)file->stat.st_size);
-    http_header_set(req->headers_out,
-        http_mem_create((u_char*)"Content-Length", sizeof("Content-Length") - 1),
-        http_mem_create(contentlen, strlen((char*)contentlen)));
+        u_char *contentlen = (u_char*)http_mempool_alloc(req->pool, 64);
+        sprintf((char*)contentlen, "%d", (int)file->stat.st_size);
+        http_header_set(req->headers_out,
+            http_mem_create((u_char*)"Content-Length", sizeof("Content-Length") - 1),
+            http_mem_create(contentlen, strlen((char*)contentlen)));
+    }
 
     req->out_chain = chain = http__build_responseline(req);
 
@@ -337,8 +340,10 @@ http_build_response(http_request_t *req)
         http_mem_create(CRLF, 2));
     chain = chain->next;
 
-    chain->next = http_sendfile_chain_create(req->pool,
-        file->fd, file->stat.st_size);
+    if (req->method_id == METHOD_GET) {
+        chain->next = http_sendfile_chain_create(req->pool,
+            file->fd, file->stat.st_size);
+    }
 
     req->major_state = SENDING_RESPONSE;
 
