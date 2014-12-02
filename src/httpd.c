@@ -78,6 +78,7 @@ main(int argc, char** argv)
     }
     */
 
+#ifndef __DEBUG__
     for (i = 0; i < 4; ++i) {
         pid = fork();
         if (pid < 0) {
@@ -90,8 +91,11 @@ main(int argc, char** argv)
         }
     }
 
-    //http__start_worker_loop(looper);
     http__start_master_loop(looper);
+#else
+    (void) i;
+    http__start_worker_loop(looper);
+#endif
 
     /* Never return. */
     /* Make valgrind happy. */
@@ -358,6 +362,10 @@ http__write(http_event_t *ev)
     req  = conn->req;
 
     LOG_VERBOSE("write %ld", conn->sockfd);
+
+    if (req->major_state == BUILDING_HEADERS) {
+        http_build_headers(req);
+    }
 
     if (req->major_state == BUILDING_RESPONSE) {
         http_build_response(req);

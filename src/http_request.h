@@ -14,6 +14,7 @@
 
 #define CRLF  ((u_char*)"\r\n")
 #define SPACE ((u_char*)" ")
+#define COLON_SPACE ((u_char*)": ")
 
 #define HTTP_BAD_REQUEST  400
 #define HTTP_UNAUTHORIZED 401
@@ -40,9 +41,10 @@
 #define PARSING_REQUEST_HEAD  1
 #define PARSING_REQUEST_BODY  2
 #define PARSING_REQUEST_END   3
-#define BUILDING_RESPONSE     4
-#define SENDING_RESPONSE      5
-#define CLOSING_REQUEST       6
+#define BUILDING_HEADERS      4
+#define BUILDING_RESPONSE     5
+#define SENDING_RESPONSE      6
+#define CLOSING_REQUEST       7
 
 
 typedef struct http_connection http_connection_t;
@@ -52,6 +54,8 @@ typedef struct http_request {
 
     unsigned           major_state : 4;
     unsigned           minor_state : 28;
+
+    int                status_code;
 
     u_char            *read_buf;
     u_char            *read_pos;
@@ -81,6 +85,7 @@ void            free_http_request(http_request_t *req);
 ssize_t http_recv_request(http_request_t *req, int sockfd);
 int     http_parse_request(http_request_t *req);
 
+int     http_build_headers(http_request_t *req);
 int     http_build_response(http_request_t *req);
 int     http_send_response(http_request_t *req);
 

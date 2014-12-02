@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -6,6 +5,7 @@
 #include <sys/sendfile.h>
 
 #include "http_log.h"
+#include "http_mem.h"
 #include "http_fcache.h"
 #include "http_request.h"
 #include "http_connection.h"
@@ -19,6 +19,9 @@ static int http_parse_request_method(http_request_t *req, http_mem_t mem);
 static int http_parse_request_uri(http_request_t *req, http_mem_t mem);
 static int http_parse_request_version(http_request_t *req, http_mem_t mem);
 
+static http_chain_t* http__build_responseline(http_request_t *req);
+static http_chain_t* http__build_responseheader(http_request_t *req, http_header_t *header);
+
 
 http_request_t*
 new_http_request(http_connection_t *conn)
@@ -26,8 +29,9 @@ new_http_request(http_connection_t *conn)
     http_request_t *req = (http_request_t*)malloc(sizeof(http_request_t));
     if (req != NULL) {
         req->conn        = conn;
-        req->pool        = http_mempool_create();
+        req->pool        = http_mempool_create(1024 * 4);
 
+        req->status_code = 200;
         req->major_state = PARSING_REQUEST_LINE;
         req->read_buf    = (u_char*)http_mempool_alloc(req->pool, 1024);
         req->read_last   = req->read_buf + 1024;
@@ -50,6 +54,7 @@ free_http_request(http_request_t *req)
 {
     if (req != NULL) {
         http_headers_free(req->headers_in);
+        http_headers_free(req->headers_out);
         http_mempool_free(req->pool);
 
         free(req);
@@ -126,7 +131,7 @@ http_parse_request(http_request_t *req)
     } while (1);
 
     if (ret == 1) {
-        req->major_state = BUILDING_RESPONSE;
+        req->major_state = BUILDING_HEADERS;
     }
 
     return ret;
@@ -270,10 +275,36 @@ char *global_buf = (char*)"HTTP/1.1 200 OK\r\nServer: ZZPServer\r\nDate: Sat, 31
 
 
 int
+http_build_headers(http_request_t *req)
+{
+    req->headers_out = http_headers_new();
+
+    http_header_set(req->headers_out,
+        http_mem_create((u_char*)"Server", sizeof("Server") - 1),
+        http_mem_create((u_char*)"HTTPD", sizeof("HTTPD") - 1));
+
+    http_header_set(req->headers_out,
+        http_mem_create((u_char*)"Date", sizeof("Date") - 1),
+        http_mem_create((u_char*)"Sat, 32 Dec 2014 23:59:59 GMT",
+            sizeof("Sat, 32 Dec 2014 23:59:59 GMT") - 1));
+
+    http_header_set(req->headers_out,
+        http_mem_create((u_char*)"Content-Type", sizeof("Content-Type") - 1),
+        http_mem_create((u_char*)"text/html", sizeof("text/html") - 1));
+
+    req->major_state = BUILDING_RESPONSE;
+
+    return 0;
+}
+
+
+int
 http_build_response(http_request_t *req)
 {
-    struct http_fcache_file *file;
+    listnode *list;
     http_chain_t *chain;
+    http_header_t *header;
+    struct http_fcache_file *file;
 
     file = http_fcache_getfile(fcache, (const char*)req->uri.base + 1);
     if (file == NULL) {
@@ -282,28 +313,33 @@ http_build_response(http_request_t *req)
         }
     }
 
-    chain = (http_chain_t*)malloc(sizeof(http_chain_t));
-    chain->type = MEMORY_CHAIN;
-    chain->data.mem = http_mem_create((u_char*)global_buf, strlen(global_buf));
-    chain->offset.mem_off = 0;
-    req->out_chain = chain;
-
     u_char *contentlen = (u_char*)http_mempool_alloc(req->pool, 64);
-    chain = (http_chain_t*)malloc(sizeof(http_chain_t));
-    sprintf((char*)contentlen, "Content-Length: %d\r\n\r\n", (int)file->stat.st_size);
-    chain->type = MEMORY_CHAIN;
-    chain->data.mem = http_mem_create(contentlen, strlen((char*)contentlen));
-    chain->offset.mem_off = 0;
-    req->out_chain->next = chain;
+    sprintf((char*)contentlen, "%d", (int)file->stat.st_size);
+    http_header_set(req->headers_out,
+        http_mem_create((u_char*)"Content-Length", sizeof("Content-Length") - 1),
+        http_mem_create(contentlen, strlen((char*)contentlen)));
 
-    chain = (http_chain_t*)malloc(sizeof(http_chain_t));
-    chain->type = SENDFILE_CHAIN;
-    chain->data.sendfile.fd = file->fd;
-    chain->data.sendfile.size = file->stat.st_size;
-    chain->offset.file_off = 0;
-    chain->next = NULL;
-    req->out_chain->next->next = chain;
-    
+    req->out_chain = chain = http__build_responseline(req);
+
+    list = list_next(&req->headers_out->list);
+    while (list != &req->headers_out->list) {
+        header = container_of(list, http_header_t, link);
+
+        chain->next = http__build_responseheader(req, header);
+        while (chain->next) {
+            chain = chain->next;
+        }
+
+        list = list_next(list);
+    }
+
+    chain->next = http_mem_chain_create(req->pool,
+        http_mem_create(CRLF, 2));
+    chain = chain->next;
+
+    chain->next = http_sendfile_chain_create(req->pool,
+        file->fd, file->stat.st_size);
+
     req->major_state = SENDING_RESPONSE;
 
     return 0;
@@ -345,9 +381,7 @@ sendloop:
             }
 
             if (chain->offset.file_off == chain->data.sendfile.size) {
-                tmp = chain;
                 chain = chain->next;
-                free(tmp);
                 LOG_DEBUG("sendfile end");
                 goto sendloop;
             }
@@ -358,13 +392,11 @@ sendloop:
         struct iovec iovec[64];
         for (;;) {
 
-          cnt = 0;
-          tmp = chain;
-          while (tmp && tmp->type == MEMORY_CHAIN) {
-              iovec[cnt].iov_base = tmp->data.mem.base;
-              iovec[cnt].iov_len = tmp->data.mem.len;
-              ++cnt;
-              tmp = tmp->next;
+          for (cnt = 0, tmp = chain; tmp != NULL && tmp->type == MEMORY_CHAIN;
+              ++cnt, tmp = tmp->next)
+          {
+              iovec[cnt].iov_base = tmp->data.mem.base + tmp->offset.mem_off;
+              iovec[cnt].iov_len = tmp->data.mem.len - tmp->offset.mem_off;
           }
 
           if (cnt == 0) {
@@ -387,16 +419,77 @@ sendloop:
           }
 
           while (nwrite && (uint64_t)nwrite >= chain->data.mem.len) {
-              nwrite -= (ssize_t)chain->data.mem.len;
+              nwrite -= (ssize_t)chain->data.mem.len - chain->offset.mem_off;
 
-              tmp = chain;
               chain = chain->next;
-              free(tmp);
+          }
+
+          if (nwrite) {
+              chain->offset.mem_off += nwrite;
           }
 
         }
     }
 
     return 0;
+}
+
+
+http_chain_t *
+http__build_responseline(http_request_t *req)
+{
+    http_mem_t mem;
+    http_chain_t *chain;
+    char *p, *responseline;
+
+    p = responseline = (char*)http_mempool_alloc(req->pool, 256);
+    switch (req->version_id) {
+    case VERSION_09:
+        sprintf(p, "%s", "HTTP/0.9 ");
+        break;
+    case VERSION_10:
+        sprintf(p, "%s", "HTTP/1.0 ");
+        break;
+    case VERSION_11:
+        sprintf(p, "%s", "HTTP/1.1 ");
+        break;
+    }
+
+    p += sizeof("HTTP/1.1 ") - 1;
+    switch (req->status_code) {
+    case 200:
+        sprintf(p, "%s", "200 OK");
+        p += sizeof("200 OK") - 1;
+        break;
+    }
+
+    *(p++) = CR;
+    *(p++) = LF;
+
+    mem = http_mem_create((u_char*)responseline, p - responseline);
+    chain = http_mem_chain_create(req->pool, mem);
+
+    return chain;
+}
+
+
+http_chain_t*
+http__build_responseheader(http_request_t *req, http_header_t *header)
+{
+    http_chain_t *chain, *p;
+
+    chain = p = http_mem_chain_create(req->pool, header->attr);
+
+    p->next = http_mem_chain_create(req->pool,
+        http_mem_create(COLON_SPACE, 2));
+    p = p->next;
+
+    p->next = http_mem_chain_create(req->pool, header->value);
+    p = p->next;
+
+    p->next = http_mem_chain_create(req->pool,
+        http_mem_create(CRLF, 2));
+
+    return chain;
 }
 

@@ -8,7 +8,7 @@
  * with different level and different color otherwise the MARCOS
  * will all become null operation.
  */
-#define __DEBUG__
+//#define __DEBUG__
 
 #ifdef __DEBUG__
 

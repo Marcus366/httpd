@@ -14,6 +14,7 @@ OBJS=$(OBJS_PATH)/httpd.o								\
 			$(OBJS_PATH)/http_header.o				\
 			$(OBJS_PATH)/http_event.o					\
 			$(OBJS_PATH)/http_mempool.o				\
+			$(OBJS_PATH)/http_chain.o					\
 			$(OBJS_PATH)/http_mem.o
 
 INSTALL=install

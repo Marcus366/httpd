@@ -54,6 +54,10 @@ http_headers_free(http_headers_t *headers)
     http_header_t *header;
     listnode *node;
 
+    if (headers == NULL) {
+        return;
+    }
+
     node = headers->list.next;
     header = container_of(node, http_header_t, link);
     while (&header->link != &headers->list) {
@@ -106,3 +110,4 @@ http_header_get(http_headers_t *headers, http_mem_t attr)
         return container_of(node, http_header_t, hash);
     }
 }
+

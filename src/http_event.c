@@ -108,7 +108,7 @@ http_event_dispatcher_poll(http_event_dispatcher_t *dispatcher)
     int i, nfds, epollfd;
 
     epollfd = dispatcher->epollfd;
-    
+
     for (;;) {
         nfds = epoll_wait(epollfd, dispatcher->events, dispatcher->maxevents, -1);
         for (i = 0; i < nfds; ++i) {
