@@ -4,8 +4,9 @@
 #include "hashtable.h"
 #include "http_mem.h"
 
-/* This is a structre to store all http header
- * attached to a http request
+/*
+ * This is a structre to store all http header
+ * attached to a http request.
  */
 typedef struct http_headers {
     unsigned count;
