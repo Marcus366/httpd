@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <signal.h>
@@ -78,14 +79,11 @@ main(int argc, char** argv)
     fprintf(file, "%ld", (long)pid);
     fclose(file);
 
-    /*
-    struct http_srv* srv = new_http_srv(port);
-    if (srv != NULL) {
-        serve(srv);
-    }
-    */
-
 #ifndef __DEBUG__
+    if (daemon(0, 0) != 0) {
+        exit(EXIT_FAILURE);
+    }
+
     for (i = 0; i < 4; ++i) {
         pid = fork();
         if (pid < 0) {
