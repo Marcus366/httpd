@@ -1,34 +1,29 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <netinet/in.h>
-#include <sys/epoll.h>
-
 #include "http_server.h"
-#include "http_connection.h"
-#include "http_timer.h"
-#include "http_log.h"
-#include "http_fcache.h"
 
 
 http_server_t*
-new_http_server(int listenfd)
+http_create_server(const char *root)
 {
-    http_server_t* svc = (http_server_t*)malloc(sizeof(http_server_t));
-    svc->listenfd = listenfd;
+    http_server_t *svc = (http_server_t*)malloc(sizeof(http_server_t));
 
-    gettimeofday(&svc->now, NULL);
-    http_timer_init();
+    if (svc == NULL) {
+        return NULL;
+    }
 
+    svc->host = strdup("*");
+    svc->root = strdup(root);
+    svc->next = NULL;
 
     return svc;
 }
 
 
-void serve(http_server_t* svc)
+http_server_t*
+http_find_server(http_server_t *head, const char *host)
 {
+    (void) host;
+    return head;
 }
 

@@ -7,6 +7,7 @@
 #include "http_chain.h"
 #include "http_header.h"
 #include "http_mempool.h"
+#include "http_listen_socket.h"
 
 
 #define CR    '\r'
@@ -41,10 +42,9 @@
 #define PARSING_REQUEST_HEAD  1
 #define PARSING_REQUEST_BODY  2
 #define PARSING_REQUEST_END   3
-#define BUILDING_HEADERS      4
-#define BUILDING_RESPONSE     5
-#define SENDING_RESPONSE      6
-#define CLOSING_REQUEST       7
+#define BUILDING_RESPONSE     4
+#define SENDING_RESPONSE      5
+#define CLOSING_REQUEST       6
 
 
 typedef struct http_connection http_connection_t;
@@ -86,7 +86,7 @@ ssize_t http_recv_request(http_request_t *req, int sockfd);
 int     http_parse_request(http_request_t *req);
 
 int     http_build_headers(http_request_t *req);
-int     http_build_response(http_request_t *req);
+int     http_build_response(http_request_t *req, http_listen_socket_t *listening);
 int     http_send_response(http_request_t *req);
 
 

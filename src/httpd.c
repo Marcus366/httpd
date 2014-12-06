@@ -12,6 +12,7 @@
 #include "http_event.h"
 #include "http_config.h"
 #include "http_fcache.h"
+#include "http_looper.h"
 #include "http_connection.h"
 
 
@@ -26,6 +27,7 @@ static int http__arguments_init(int argc, char **argv);
 static int http__signals_init();
 static int http__config_init(http_looper_t *looper);
 static int http__socket_init(http_looper_t *looper);
+static int http__server_init(http_looper_t *looper);
 
 static void http__start_master_loop(http_looper_t *looper);
 static void http__start_worker_loop(http_looper_t *looper);
@@ -35,6 +37,7 @@ static void http__read(http_event_t *ev);
 static void http__write(http_event_t *ev);
 
 static void http__close_listen_socket(http_listen_socket_t *socket);
+
 
 int
 main(int argc, char** argv)
@@ -60,6 +63,10 @@ main(int argc, char** argv)
     }
 
     if (http__socket_init(looper) != 0) {
+        exit(EXIT_FAILURE);
+    }
+
+    if (http__server_init(looper) != 0) {
         exit(EXIT_FAILURE);
     }
 
@@ -218,6 +225,21 @@ http__socket_init(http_looper_t *looper)
 }
 
 
+int
+http__server_init(http_looper_t *looper)
+{
+#ifndef __DEBUG__
+    http_server_t *svc = http_create_server("/usr/local/www");
+#else
+    http_server_t *svc = http_create_server("./");
+#endif
+
+    looper->listening->servers = svc;
+
+    return 0;
+}
+
+
 void
 http__start_master_loop(http_looper_t *looper)
 {
@@ -317,7 +339,7 @@ http__accept(http_event_t *ev)
             return ;
         }
 
-        conn = new_http_connection(connfd);
+        conn = new_http_connection(connfd, listening);
         event = http_event_create(connfd, HTTP_EVENT_IN | HTTP_EVENT_ET,
             (http_event_data_t)conn, (http_event_handler_t)http__read);
         http_event_dispatcher_add_event(ev->dispatcher, event);
@@ -363,12 +385,8 @@ http__write(http_event_t *ev)
 
     LOG_VERBOSE("write %ld", conn->sockfd);
 
-    if (req->major_state == BUILDING_HEADERS) {
-        http_build_headers(req);
-    }
-
     if (req->major_state == BUILDING_RESPONSE) {
-        http_build_response(req);
+        http_build_response(req, conn->listening);
     }
 
     if (req->major_state == SENDING_RESPONSE) {

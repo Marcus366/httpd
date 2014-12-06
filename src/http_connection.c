@@ -17,16 +17,21 @@ ull conn_count = 0;
 
 
 http_connection_t*
-new_http_connection(int sockfd)
+new_http_connection(int sockfd, http_listen_socket_t *listening)
 {
-    http_connection_t* conn = 
+    http_connection_t* conn =
         (http_connection_t*)malloc(sizeof(http_connection_t));
-    if (conn != NULL) {
-        conn->uuid   = conn_count++;
-        conn->sockfd = sockfd;
-        conn->state  = CONN_READ;
-        conn->req    = NULL;
+
+    if (conn == NULL) {
+        return NULL;
     }
+
+    conn->uuid      = conn_count++;
+    conn->sockfd    = sockfd;
+    conn->state     = CONN_READ;
+    conn->listening = listening;
+    conn->req       = NULL;
+
     return conn;
 }
 

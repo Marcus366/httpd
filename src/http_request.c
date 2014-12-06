@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -6,6 +7,7 @@
 
 #include "http_log.h"
 #include "http_mem.h"
+#include "http_server.h"
 #include "http_fcache.h"
 #include "http_request.h"
 #include "http_connection.h"
@@ -131,7 +133,7 @@ http_parse_request(http_request_t *req)
     } while (1);
 
     if (ret == 1) {
-        req->major_state = BUILDING_HEADERS;
+        req->major_state = BUILDING_RESPONSE;
     }
 
     return ret;
@@ -271,9 +273,6 @@ http_parse_request_body(http_request_t *req, http_mem_t mem)
 }
 
 
-char *global_buf = (char*)"HTTP/1.1 200 OK\r\nServer: ZZPServer\r\nDate: Sat, 31 Dec 2014 23:59:59 GMT\r\nContent-Type: text/html\r\n";
-
-
 int
 http_build_headers(http_request_t *req)
 {
@@ -292,28 +291,31 @@ http_build_headers(http_request_t *req)
         http_mem_create((u_char*)"Content-Type", sizeof("Content-Type") - 1),
         http_mem_create((u_char*)"text/html", sizeof("text/html") - 1));
 
-    req->major_state = BUILDING_RESPONSE;
-
     return 0;
 }
 
 
 int
-http_build_response(http_request_t *req)
+http_build_response(http_request_t *req, http_listen_socket_t *listening)
 {
     listnode *list;
+    char filename[256];
     http_chain_t *chain;
     http_header_t *header;
+    http_server_t *server;
     struct http_fcache_file *file;
 
+    (void) http_build_headers(req);
+
     if (req->method_id == METHOD_GET) {
-        file = http_fcache_getfile(fcache, (const char*)req->uri.base + 1);
+        server = http_find_server(listening->servers, "*");
+        snprintf(filename, sizeof(filename), "%s%s", server->root, req->uri.base);
+        file = http_fcache_getfile(fcache, filename);
         if (file == NULL) {
-            if ((file = http_fcache_putfile(fcache, (const char*)req->uri.base + 1)) == NULL) {
+            if ((file = http_fcache_putfile(fcache, filename)) == NULL) {
                 return -1;
             }
         }
-      
 
         u_char *contentlen = (u_char*)http_mempool_alloc(req->pool, 64);
         sprintf((char*)contentlen, "%d", (int)file->stat.st_size);

@@ -38,7 +38,9 @@ clean:
 
 install: $(OBJS_PATH)/httpd
 	$(INSTALL) $(INSTALL_FLAGS) $(OBJS_PATH)/httpd /usr/local/bin/
+	test -d /usr/local/www || mkdir /usr/local/www
 	test -d /etc/httpd || mkdir /etc/httpd
+	cp config/index.html /usr/local/www/index.html
 	cp config/httpd.conf /etc/httpd/httpd.conf
 	touch /etc/httpd/httpd.pid && chmod 644 /etc/httpd/httpd.pid
 

@@ -4,6 +4,7 @@
 
 #include "httpd.h"
 #include "http_request.h"
+#include "http_listen_socket.h"
 
 
 enum conn_state {
@@ -20,15 +21,16 @@ typedef unsigned long long ull;
 typedef struct http_connection {
     //struct http_srv *srv;
 
-    ull              uuid;
-    int              sockfd;
-    enum conn_state  state;
-    http_request_t  *req;
+    ull                   uuid;
+    int                   sockfd;
+    enum conn_state       state;
+    http_request_t       *req;
+    http_listen_socket_t *listening;
 } http_connection_t;
 
 #define SET_CONN_STATE(conn, newstate) do { conn->state = newstate; } while (0);
 
-http_connection_t* new_http_connection(int sockfd);
+http_connection_t* new_http_connection(int sockfd, http_listen_socket_t *listening);
 void              free_http_connection(http_connection_t* conn);
 
 int http_close_connection(http_connection_t* conn);
